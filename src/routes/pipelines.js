@@ -106,6 +106,18 @@ router.patch('/stages/:id', requirePermission('stages.edit'), (req, res) => {
   res.json(stage);
 });
 
+// Delete stage
+router.delete('/stages/:id', requirePermission('stages.delete'), (req, res) => {
+  const stage = stages.get(req.params.id);
+
+  if (!stage || stage.tenant_id !== req.tenant.id) {
+    return res.status(404).json({ error: 'שלב לא נמצא' });
+  }
+
+  stages.delete(req.params.id);
+  res.json({ message: 'שלב נמחק' });
+});
+
 // Delete pipeline
 router.delete('/:id', requirePermission('pipelines.delete'), (req, res) => {
   const pipeline = pipelines.get(req.params.id);

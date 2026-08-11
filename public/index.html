@@ -49,6 +49,7 @@
 
     let customers = [];
     let pipelines = [];
+    let stages = [];
     let tasks = [];
     let activities = [];
     let apiKeys = [];
@@ -107,6 +108,11 @@
         activities = aRes.data || [];
         webhooks = wRes.data || [];
         apiKeys = kRes.data || [];
+
+        const stageResults = await Promise.all(
+          pipelines.map(p => apiCall(`/pipelines/${p.id}/stages`))
+        );
+        stages = stageResults.flatMap(r => r.stages || []);
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -298,16 +304,12 @@
               </div>
               <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <input type="text" id="company" placeholder="חברה" class="px-4 py-2 border border-gray-300 rounded-lg">
-                <select id="pipeline" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <select id="pipeline" onchange="updateStageOptions()" class="px-4 py-2 border border-gray-300 rounded-lg">
                   <option value="">בחר Pipeline</option>
                   ${pipelines.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                 </select>
                 <select id="stage" class="px-4 py-2 border border-gray-300 rounded-lg">
-                  <option value="lead">🔴 Lead</option>
-                  <option value="contact">🟠 Contacted</option>
-                  <option value="proposal">🟡 Proposal</option>
-                  <option value="negotiation">🟢 Negotiation</option>
-                  <option value="closed">✅ Closed</option>
+                  <option value="">בחר שלב</option>
                 </select>
                 <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף לקוח</button>
               </div>
@@ -329,14 +331,16 @@
               <tbody>
                 ${customers.filter(c => c.status !== 'deleted').map(c => {
                   const pipeline = pipelines.find(p => p.id === c.pipeline_id);
-                  const stageLabels = { lead: '🔴 Lead', contact: '🟠 Contacted', proposal: '🟡 Proposal', negotiation: '🟢 Negotiation', closed: '✅ Closed' };
+                  const stage = stages.find(s => s.id === c.stage_id);
                   return `
                     <tr class="border-b hover:bg-gray-50">
                       <td class="px-6 py-4 font-medium">${c.first_name} ${c.last_name}</td>
                       <td class="px-6 py-4 text-sm">${c.email}</td>
                       <td class="px-6 py-4 text-sm">${c.company || '-'}</td>
                       <td class="px-6 py-4 text-sm font-medium" style="color: var(--primary);">${pipeline?.name || '-'}</td>
-                      <td class="px-6 py-4 text-sm">${stageLabels[c.stage_id] || c.stage_id || '-'}</td>
+                      <td class="px-6 py-4 text-sm">
+                        ${stage ? `<span class="px-2 py-1 rounded text-white text-xs font-medium" style="background-color: ${stage.color};">${stage.name}</span>` : '-'}
+                      </td>
                       <td class="px-6 py-4 text-sm">
                         <button onclick="deleteCustomer('${c.id}')" class="text-red-600 hover:text-red-800">🗑️ מחק</button>
                       </td>
@@ -347,6 +351,19 @@
             </table>
           </div>
         `;
+
+        window.updateStageOptions = function() {
+          const pipelineId = document.getElementById('pipeline').value;
+          const stageSelect = document.getElementById('stage');
+          const pipelineStages = stages
+            .filter(s => s.pipeline_id === pipelineId)
+            .sort((a, b) => a.position - b.position);
+
+          stageSelect.innerHTML = pipelineStages.length
+            ? pipelineStages.map(s => `<option value="${s.id}">${s.name}</option>`).join('')
+            : `<option value="">אין שלבים - הוסף ב-Pipelines</option>`;
+        };
+        updateStageOptions();
 
         document.getElementById('customerForm')?.addEventListener('submit', async (e) => {
           e.preventDefault();
@@ -360,11 +377,12 @@
                 phone: document.getElementById('phone').value,
                 company: document.getElementById('company').value,
                 pipeline_id: document.getElementById('pipeline').value || null,
-                stage_id: document.getElementById('stage').value || 'lead'
+                stage_id: document.getElementById('stage').value || null
               })
             });
             alert('✓ לקוח נוסף');
             document.getElementById('customerForm').reset();
+            updateStageOptions();
             await loadData();
             renderContent();
           } catch (error) {
@@ -375,17 +393,10 @@
       } else if (currentView === 'pipelines') {
         document.getElementById('pageTitle').textContent = '🎯 Pipelines - Kanban Board';
 
-        // Get pipeline stages mapping
-        const pipelineStages = {};
-        pipelines.forEach(p => {
-          pipelineStages[p.id] = [
-            { id: 'lead', name: '🔴 Leads', color: '#EF4444' },
-            { id: 'contact', name: '🟠 Contacted', color: '#F97316' },
-            { id: 'proposal', name: '🟡 Proposal', color: '#EAB308' },
-            { id: 'negotiation', name: '🟢 Negotiation', color: '#22C55E' },
-            { id: 'closed', name: '✅ Closed', color: '#10B981' }
-          ];
-        });
+        // Stages are defined manually per pipeline - nothing is auto-generated
+        const stagesFor = (pipelineId) => stages
+          .filter(s => s.pipeline_id === pipelineId)
+          .sort((a, b) => a.position - b.position);
 
         content.innerHTML = `
           <div class="mb-6">
@@ -402,49 +413,63 @@
             </div>
           ` : ''}
 
-          ${pipelines.map(p => `
+          ${pipelines.map(p => {
+            const pStages = stagesFor(p.id);
+            return `
             <div class="mb-8">
               <div class="flex justify-between items-center mb-4">
                 <h3 class="text-2xl font-bold" style="color: var(--secondary);">📊 ${p.name}</h3>
                 <button onclick="deletePipeline('${p.id}')" class="text-red-600 hover:text-red-800 font-bold">🗑️ Delete</button>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                ${pipelineStages[p.id].map(stage => `
-                  <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="p-4" style="background-color: ${stage.color}; color: white;">
-                      <h4 class="font-bold text-sm">${stage.name}</h4>
-                      <p class="text-xs mt-1">${customers.filter(c => c.pipeline_id === p.id && c.stage_id === stage.id).length} לקוחות</p>
-                    </div>
-
-                    <div class="p-3 min-h-96 bg-gray-50 overflow-y-auto"
-                         id="stage-${p.id}-${stage.id}"
-                         ondrop="handleDrop(event, '${p.id}', '${stage.id}')"
-                         ondragover="handleDragOver(event)"
-                         ondragleave="handleDragLeave(event)"
-                         style="min-height: 400px;">
-
-                      ${customers.filter(c => c.pipeline_id === p.id && c.stage_id === stage.id).map(c => `
-                        <div class="bg-white p-3 rounded-lg shadow mb-2 cursor-move hover:shadow-md transition border-r-4"
-                             style="border-color: ${stage.color};"
-                             draggable="true"
-                             ondragstart="handleDragStart(event, '${c.id}', '${p.id}')"
-                             ondragend="handleDragEnd(event)">
-                          <p class="font-medium text-sm">${c.first_name} ${c.last_name}</p>
-                          <p class="text-xs text-gray-600 truncate">${c.email}</p>
-                          <p class="text-xs text-gray-500 mt-1">${c.company || '-'}</p>
+              ${pStages.length === 0 ? `
+                <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center mb-4">
+                  <p class="text-gray-600">אין שלבים ל-Pipeline הזה עדיין. הוסף שלבים ידנית למטה ↓</p>
+                </div>
+              ` : `
+                <div class="grid gap-4 mb-4" style="grid-template-columns: repeat(${pStages.length}, minmax(220px, 1fr));">
+                  ${pStages.map(stage => `
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                      <div class="p-4 flex justify-between items-start gap-2" style="background-color: ${stage.color}; color: white;">
+                        <div>
+                          <h4 class="font-bold text-sm">${stage.name}</h4>
+                          <p class="text-xs mt-1">${customers.filter(c => c.pipeline_id === p.id && c.stage_id === stage.id).length} לקוחות</p>
                         </div>
-                      `).join('')}
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
+                        <button onclick="deleteStage('${stage.id}')" title="מחק שלב" class="text-white text-xs opacity-80 hover:opacity-100">✕</button>
+                      </div>
 
-              <div class="bg-white rounded-lg shadow p-4">
-                <input type="text" placeholder="שם שלב חדש (optional)" id="newStageName-${p.id}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                      <div class="p-3 min-h-96 bg-gray-50 overflow-y-auto"
+                           id="stage-${p.id}-${stage.id}"
+                           ondrop="handleDrop(event, '${p.id}', '${stage.id}')"
+                           ondragover="handleDragOver(event)"
+                           ondragleave="handleDragLeave(event)"
+                           style="min-height: 400px;">
+
+                        ${customers.filter(c => c.pipeline_id === p.id && c.stage_id === stage.id).map(c => `
+                          <div class="bg-white p-3 rounded-lg shadow mb-2 cursor-move hover:shadow-md transition border-r-4"
+                               style="border-color: ${stage.color};"
+                               draggable="true"
+                               ondragstart="handleDragStart(event, '${c.id}', '${p.id}')"
+                               ondragend="handleDragEnd(event)">
+                            <p class="font-medium text-sm">${c.first_name} ${c.last_name}</p>
+                            <p class="text-xs text-gray-600 truncate">${c.email}</p>
+                            <p class="text-xs text-gray-500 mt-1">${c.company || '-'}</p>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+
+              <div class="bg-white rounded-lg shadow p-4 flex gap-2 flex-wrap items-center">
+                <input type="text" placeholder="שם שלב חדש" id="newStageName-${p.id}" class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <input type="color" id="newStageColor-${p.id}" value="#3B82F6" class="h-10 w-14 border border-gray-300 rounded-lg cursor-pointer">
+                <button onclick="createStage('${p.id}')" class="text-white font-bold px-4 py-2 rounded-lg text-sm" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף שלב</button>
               </div>
             </div>
-          `).join('')}
+          `;
+          }).join('')}
         `;
 
         // Attach event listeners
@@ -458,6 +483,34 @@
             });
             alert('✓ Pipeline נוצר');
             document.getElementById('pipelineName').value = '';
+            await loadData();
+            renderContent();
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        };
+
+        window.createStage = async function(pipelineId) {
+          const nameInput = document.getElementById(`newStageName-${pipelineId}`);
+          const colorInput = document.getElementById(`newStageColor-${pipelineId}`);
+          const name = nameInput.value.trim();
+          if (!name) { alert('הזן שם שלב'); return; }
+          try {
+            await apiCall(`/pipelines/${pipelineId}/stages`, {
+              method: 'POST',
+              body: JSON.stringify({ name, color: colorInput.value })
+            });
+            await loadData();
+            renderContent();
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        };
+
+        window.deleteStage = async function(stageId) {
+          if (!confirm('למחוק את השלב? לקוחות שנמצאים בו לא יעברו אוטומטית לשלב אחר.')) return;
+          try {
+            await apiCall(`/pipelines/stages/${stageId}`, { method: 'DELETE' });
             await loadData();
             renderContent();
           } catch (error) {
