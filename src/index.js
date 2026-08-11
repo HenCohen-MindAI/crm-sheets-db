@@ -1,10 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initGoogleSheets } from './db/sheets.js';
 import authRoutes from './routes/auth.js';
 import { authMiddleware } from './middleware/auth.js';
 import { tenantMiddleware } from './middleware/tenant.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 dotenv.config();
 
@@ -13,6 +17,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors());
+
+// Serve static files (HTML, CSS, JS)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Public status check (no auth required)
 app.get('/status', (req, res) => {
