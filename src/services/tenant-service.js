@@ -32,6 +32,10 @@ export function updateTenantSpreadsheet(tenantId, spreadsheetId) {
   return tenant;
 }
 
+export function listTenants() {
+  return Array.from(tenants.values());
+}
+
 export function createTenant(name) {
   const tenant = {
     id: uuidv4(),

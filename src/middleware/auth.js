@@ -1,16 +1,23 @@
 import jwt from 'jsonwebtoken';
+import { verifyApiKey } from '../routes/api-keys.js';
+import { API_KEY_PERMISSIONS } from '../services/permissions.js';
 
 export function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   const apiKey = req.headers['x-api-key'];
 
   if (apiKey) {
-    // API Key authentication
+    const record = verifyApiKey(apiKey);
+    if (!record) {
+      return res.status(401).json({ error: 'Invalid API key' });
+    }
+
     req.user = {
-      userId: 'api-user',
-      tenantId: 'api-tenant', // Will be verified later
-      isApiKey: true,
-      apiKey
+      userId: `api-key:${record.id}`,
+      tenantId: record.tenant_id,
+      role: 'api',
+      permissions: API_KEY_PERMISSIONS,
+      isApiKey: true
     };
     return next();
   }

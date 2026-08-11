@@ -46,6 +46,14 @@ router.post('/', requirePermission('customers.create'), (req, res) => {
 
   customers.set(customer.id, customer);
 
+  logActivity(req.tenant.id, 'customer.created', {
+    description: `לקוח חדש נוצר: ${customer.first_name} ${customer.last_name}`,
+    customer_id: customer.id,
+    user_id: req.tenant.userId,
+    source: req.tenant.role === 'api' ? 'api' : 'manual'
+  });
+  triggerWebhook(req.tenant.id, 'customer.created', { customer });
+
   res.status(201).json(customer);
 });
 
@@ -66,10 +74,33 @@ router.patch('/:id', requirePermission('customers.edit'), (req, res) => {
     return res.status(404).json({ error: 'Customer not found' });
   }
 
+  const previousStageId = customer.stage_id;
+  const stageChanged = 'stage_id' in req.body && req.body.stage_id !== previousStageId;
+
   Object.assign(customer, {
     ...req.body,
     updated_at: new Date().toISOString()
   });
+
+  if (stageChanged) {
+    logActivity(req.tenant.id, 'customer.stage_changed', {
+      description: `${customer.first_name} ${customer.last_name} עבר לשלב חדש`,
+      customer_id: customer.id,
+      previous_value: previousStageId,
+      new_value: customer.stage_id,
+      user_id: req.tenant.userId,
+      source: req.tenant.role === 'api' ? 'api' : 'manual'
+    });
+    triggerWebhook(req.tenant.id, 'customer.stage_changed', { customer, previous_stage_id: previousStageId });
+  } else {
+    logActivity(req.tenant.id, 'customer.updated', {
+      description: `הלקוח ${customer.first_name} ${customer.last_name} עודכן`,
+      customer_id: customer.id,
+      user_id: req.tenant.userId,
+      source: req.tenant.role === 'api' ? 'api' : 'manual'
+    });
+    triggerWebhook(req.tenant.id, 'customer.updated', { customer });
+  }
 
   res.json(customer);
 });
@@ -82,6 +113,15 @@ router.delete('/:id', requirePermission('customers.delete'), (req, res) => {
   }
 
   customers.delete(req.params.id);
+
+  logActivity(req.tenant.id, 'customer.deleted', {
+    description: `הלקוח ${customer.first_name} ${customer.last_name} נמחק`,
+    customer_id: customer.id,
+    user_id: req.tenant.userId,
+    source: req.tenant.role === 'api' ? 'api' : 'manual'
+  });
+  triggerWebhook(req.tenant.id, 'customer.deleted', { customer_id: customer.id });
+
   res.json({ message: 'Customer deleted' });
 });
 

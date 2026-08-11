@@ -1,6 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { requirePermission } from '../middleware/tenant.js';
+import { logActivity } from './activity.js';
 
 const router = express.Router();
 
@@ -39,6 +40,13 @@ router.post('/', requirePermission('pipelines.create'), (req, res) => {
   };
 
   pipelines.set(pipeline.id, pipeline);
+
+  logActivity(req.tenant.id, 'pipeline.created', {
+    description: `Pipeline חדש נוצר: ${pipeline.name}`,
+    user_id: req.tenant.userId,
+    source: 'manual'
+  });
+
   res.status(201).json(pipeline);
 });
 
@@ -87,6 +95,13 @@ router.post('/:id/stages', requirePermission('stages.create'), (req, res) => {
   };
 
   stages.set(stage.id, stage);
+
+  logActivity(req.tenant.id, 'stage.created', {
+    description: `שלב חדש נוצר: ${stage.name}`,
+    user_id: req.tenant.userId,
+    source: 'manual'
+  });
+
   res.status(201).json(stage);
 });
 
@@ -132,6 +147,13 @@ router.delete('/:id', requirePermission('pipelines.delete'), (req, res) => {
     .forEach(([id]) => stages.delete(id));
 
   pipelines.delete(req.params.id);
+
+  logActivity(req.tenant.id, 'pipeline.deleted', {
+    description: `Pipeline נמחק: ${pipeline.name}`,
+    user_id: req.tenant.userId,
+    source: 'manual'
+  });
+
   res.json({ message: 'Pipeline נמחק' });
 });
 

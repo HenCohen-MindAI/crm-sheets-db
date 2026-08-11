@@ -1,9 +1,10 @@
 import express from 'express';
 import { generateToken } from '../middleware/auth.js';
+import { findUserByEmail, verifyPassword } from '../services/user-service.js';
+import { ROLE_PERMISSIONS } from '../services/permissions.js';
 
 const router = express.Router();
 
-// Mock login - replace with real auth later
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
 
@@ -11,50 +12,25 @@ router.post('/login', (req, res) => {
     return res.status(400).json({ error: 'Email and password required' });
   }
 
-  // Mock validation
-  if (email === 'admin@test.com' && password === 'password') {
-    const token = generateToken(
-      'user-1',
-      'tenant-1',
-      'admin',
-      [
-        'customers.view',
-        'customers.view_all',
-        'customers.create',
-        'customers.edit',
-        'customers.delete',
-        'pipelines.view',
-        'pipelines.create',
-        'pipelines.delete',
-        'stages.create',
-        'stages.edit',
-        'stages.delete',
-        'tasks.view',
-        'tasks.create',
-        'notes.view',
-        'notes.create',
-        'webhooks.view',
-        'api.view',
-        'users.view',
-        'settings.view',
-        'settings.edit',
-        'google.manage'
-      ]
-    );
+  const user = findUserByEmail(email);
 
-    return res.json({
-      token,
-      user: {
-        id: 'user-1',
-        email,
-        name: 'Admin User',
-        role: 'admin',
-        tenantId: 'tenant-1'
-      }
-    });
+  if (!user || !verifyPassword(user, password)) {
+    return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  res.status(401).json({ error: 'Invalid credentials' });
+  const permissions = ROLE_PERMISSIONS[user.role] || [];
+  const token = generateToken(user.id, user.tenant_id, user.role, permissions);
+
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenant_id
+    }
+  });
 });
 
 router.post('/logout', (req, res) => {

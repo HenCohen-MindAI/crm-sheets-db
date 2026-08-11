@@ -53,6 +53,22 @@ router.delete('/:id', requirePermission('webhooks.delete'), (req, res) => {
   res.json({ message: 'Webhook נמחק' });
 });
 
+// Recent delivery attempts for a webhook (debugging aid)
+router.get('/:id/logs', requirePermission('webhooks.view'), (req, res) => {
+  const webhook = webhooks.get(req.params.id);
+
+  if (!webhook || webhook.tenant_id !== req.tenant.id) {
+    return res.status(404).json({ error: 'Webhook לא נמצא' });
+  }
+
+  const logs = Array.from(webhookLogs.values())
+    .filter(l => l.webhook_id === req.params.id)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 20);
+
+  res.json({ data: logs, count: logs.length });
+});
+
 // Trigger webhook (internal)
 export async function triggerWebhook(tenantId, event, payload) {
   const tenantWebhooks = Array.from(webhooks.values())
@@ -74,11 +90,23 @@ export async function triggerWebhook(tenantId, event, payload) {
 
       webhookLogs.set(uuidv4(), {
         webhook_id: webhook.id,
+        event,
+        url: webhook.url,
         status: response.status,
         success: response.ok,
+        error: null,
         created_at: new Date().toISOString()
       });
     } catch (error) {
+      webhookLogs.set(uuidv4(), {
+        webhook_id: webhook.id,
+        event,
+        url: webhook.url,
+        status: null,
+        success: false,
+        error: error.message,
+        created_at: new Date().toISOString()
+      });
       console.error(`Webhook failed for ${webhook.url}:`, error.message);
     }
   }

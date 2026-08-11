@@ -1,6 +1,8 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { requirePermission } from '../middleware/tenant.js';
+import { triggerWebhook } from './webhooks.js';
+import { logActivity } from './activity.js';
 
 const router = express.Router();
 
@@ -32,12 +34,21 @@ router.post('/', requirePermission('tasks.create'), (req, res) => {
     priority: priority || 'medium',
     status: 'open',
     due_date: due_date || null,
+    completed_at: null,
     user_id: req.tenant.userId,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 
   tasks.set(task.id, task);
+
+  logActivity(req.tenant.id, 'task.created', {
+    description: `משימה חדשה נוצרה: ${task.title}`,
+    user_id: req.tenant.userId,
+    source: req.tenant.role === 'api' ? 'api' : 'manual'
+  });
+  triggerWebhook(req.tenant.id, 'task.created', { task });
+
   res.status(201).json(task);
 });
 
@@ -48,10 +59,28 @@ router.patch('/:id', requirePermission('tasks.edit'), (req, res) => {
     return res.status(404).json({ error: 'משימה לא נמצאת' });
   }
 
+  const statusChangedToCompleted = req.body.status === 'completed' && task.status !== 'completed';
+
   Object.assign(task, {
     ...req.body,
+    completed_at: statusChangedToCompleted ? new Date().toISOString() : task.completed_at,
     updated_at: new Date().toISOString()
   });
+
+  if (statusChangedToCompleted) {
+    logActivity(req.tenant.id, 'task.completed', {
+      description: `המשימה "${task.title}" הושלמה`,
+      user_id: req.tenant.userId,
+      source: req.tenant.role === 'api' ? 'api' : 'manual'
+    });
+    triggerWebhook(req.tenant.id, 'task.completed', { task });
+  } else {
+    logActivity(req.tenant.id, 'task.updated', {
+      description: `המשימה "${task.title}" עודכנה`,
+      user_id: req.tenant.userId,
+      source: req.tenant.role === 'api' ? 'api' : 'manual'
+    });
+  }
 
   res.json(task);
 });
@@ -64,6 +93,13 @@ router.delete('/:id', requirePermission('tasks.delete'), (req, res) => {
   }
 
   tasks.delete(req.params.id);
+
+  logActivity(req.tenant.id, 'task.deleted', {
+    description: `המשימה "${task.title}" נמחקה`,
+    user_id: req.tenant.userId,
+    source: 'manual'
+  });
+
   res.json({ message: 'משימה נמחקה' });
 });
 

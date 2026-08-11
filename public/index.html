@@ -44,6 +44,7 @@
 
   <script type="module">
     const API_URL = window.location.origin + '/api';
+    const ROLE_LABELS = { admin: 'מנהל מערכת', manager: 'מנהל צוות', sales_rep: 'איש מכירות', viewer: 'צפייה בלבד' };
     let token = localStorage.getItem('token');
     let currentView = token ? 'dashboard' : 'login';
 
@@ -54,6 +55,10 @@
     let activities = [];
     let apiKeys = [];
     let webhooks = [];
+    let employees = [];
+    let businesses = [];
+    let lastCreatedApiKey = null;
+    let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
     async function apiCall(endpoint, options = {}) {
       const headers = {
@@ -77,7 +82,9 @@
           body: JSON.stringify({ email, password })
         });
         token = data.token;
+        currentUser = data.user;
         localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(currentUser));
         currentView = 'dashboard';
         render();
       } catch (error) {
@@ -87,35 +94,46 @@
 
     async function logout() {
       token = null;
+      currentUser = null;
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       currentView = 'login';
       render();
     }
 
-    async function loadData() {
+    async function safeApiCall(endpoint) {
       try {
-        const [cRes, pRes, tRes, aRes, wRes, kRes] = await Promise.all([
-          apiCall('/customers'),
-          apiCall('/pipelines'),
-          apiCall('/tasks'),
-          apiCall('/activity'),
-          apiCall('/webhooks'),
-          apiCall('/api-keys')
-        ]);
-        customers = cRes.data || [];
-        pipelines = pRes.data || [];
-        tasks = tRes.data || [];
-        activities = aRes.data || [];
-        webhooks = wRes.data || [];
-        apiKeys = kRes.data || [];
-
-        const stageResults = await Promise.all(
-          pipelines.map(p => apiCall(`/pipelines/${p.id}/stages`))
-        );
-        stages = stageResults.flatMap(r => r.stages || []);
+        return await apiCall(endpoint);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error(`Failed to load ${endpoint}:`, error.message);
+        return { data: [] };
       }
+    }
+
+    async function loadData() {
+      const [cRes, pRes, tRes, aRes, wRes, kRes, uRes, bRes] = await Promise.all([
+        safeApiCall('/customers'),
+        safeApiCall('/pipelines'),
+        safeApiCall('/tasks'),
+        safeApiCall('/activity'),
+        safeApiCall('/webhooks'),
+        safeApiCall('/api-keys'),
+        safeApiCall('/users'),
+        safeApiCall('/tenants')
+      ]);
+      customers = cRes.data || [];
+      pipelines = pRes.data || [];
+      tasks = tRes.data || [];
+      activities = aRes.data || [];
+      webhooks = wRes.data || [];
+      apiKeys = kRes.data || [];
+      employees = uRes.data || [];
+      businesses = bRes.data || [];
+
+      const stageResults = await Promise.all(
+        pipelines.map(p => safeApiCall(`/pipelines/${p.id}/stages`))
+      );
+      stages = stageResults.flatMap(r => r.stages || []);
     }
 
     function renderLogin() {
@@ -178,7 +196,7 @@
               <p class="text-xs text-gray-200">ניהול לקוחות ועסקים</p>
             </div>
             <nav class="p-4 space-y-2">
-              ${['dashboard', 'customers', 'pipelines', 'tasks', 'activity', 'webhooks', 'api-keys', 'settings'].map(view => `
+              ${['dashboard', 'customers', 'pipelines', 'tasks', 'activity', 'webhooks', 'api-keys', 'users', 'settings'].map(view => `
                 <button onclick="switchView('${view}')" class="sidebar-item w-full text-right px-4 py-3 rounded-lg ${currentView === view ? 'active' : ''}">
                   ${view === 'dashboard' ? '📊 לוח בקרה' :
                     view === 'customers' ? '👥 לקוחות' :
@@ -187,6 +205,7 @@
                     view === 'activity' ? '📝 פעילות' :
                     view === 'webhooks' ? '🔗 Webhooks' :
                     view === 'api-keys' ? '🔑 API Keys' :
+                    view === 'users' ? '👤 עובדים' :
                     '⚙️ הגדרות'}
                 </button>
               `).join('')}
@@ -520,13 +539,37 @@
 
       } else if (currentView === 'tasks') {
         document.getElementById('pageTitle').textContent = '✓ משימות';
+
+        const taskColumns = [
+          { status: 'open', label: '📋 פתוח', bg: 'bg-blue-50', border: 'border-blue-200' },
+          { status: 'in_progress', label: '⚙️ בהביצוע', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+          { status: 'completed', label: '✅ הושלמו', bg: 'bg-green-50', border: 'border-green-200' },
+          { status: 'cancelled', label: '🚫 בוטלו', bg: 'bg-gray-100', border: 'border-gray-300' }
+        ];
+
+        const priorityLabel = { low: '👇 נמוכה', medium: '➡️ בינונית', high: '👆 גבוהה' };
+
+        const completedInRange = (t) => {
+          if (!taskFilterFrom && !taskFilterTo) return true;
+          if (!t.completed_at) return false;
+          const d = t.completed_at.slice(0, 10);
+          if (taskFilterFrom && d < taskFilterFrom) return false;
+          if (taskFilterTo && d > taskFilterTo) return false;
+          return true;
+        };
+
+        const tasksForColumn = (status) => {
+          const filtered = tasks.filter(t => t.status === status);
+          return status === 'completed' ? filtered.filter(completedInRange) : filtered;
+        };
+
         content.innerHTML = `
           <div class="mb-6">
             <form id="taskForm" class="bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-4 gap-2">
               <input type="text" id="taskTitle" placeholder="כותרת משימה" required class="px-4 py-2 border border-gray-300 rounded-lg">
               <select id="taskPriority" class="px-4 py-2 border border-gray-300 rounded-lg">
                 <option value="low">👇 נמוכה</option>
-                <option value="medium">➡️ בינונית</option>
+                <option value="medium" selected>➡️ בינונית</option>
                 <option value="high">👆 גבוהה</option>
               </select>
               <input type="date" id="taskDue" class="px-4 py-2 border border-gray-300 rounded-lg">
@@ -534,43 +577,51 @@
             </form>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white rounded-xl shadow p-6">
-              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📋 פתוח</h3>
-              <div class="space-y-3">
-                ${tasks.filter(t => t.status === 'open').map(t => `
-                  <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p class="font-medium">${t.title}</p>
-                    <p class="text-xs text-gray-600 mt-1">Priority: ${t.priority}</p>
-                    <button onclick="updateTaskStatus('${t.id}', 'in_progress')" class="text-xs text-blue-600 hover:text-blue-800 mt-2">→ בהביצוע</button>
-                  </div>
-                `).join('')}
-              </div>
+          <div class="mb-6 bg-white p-4 rounded-xl shadow flex flex-wrap items-end gap-2">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">משימות שהושלמו מתאריך</label>
+              <input type="date" id="taskFilterFrom" value="${taskFilterFrom}" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
             </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">עד תאריך</label>
+              <input type="date" id="taskFilterTo" value="${taskFilterTo}" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            </div>
+            <button onclick="applyTaskDateFilter()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm hover:bg-blue-700">🔍 סנן</button>
+            ${(taskFilterFrom || taskFilterTo) ? `<button onclick="clearTaskDateFilter()" class="text-gray-600 hover:text-gray-800 text-sm">✕ נקה סינון</button>` : ''}
+          </div>
 
-            <div class="bg-white rounded-xl shadow p-6">
-              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">⚙️ בהביצוע</h3>
-              <div class="space-y-3">
-                ${tasks.filter(t => t.status === 'in_progress').map(t => `
-                  <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <p class="font-medium">${t.title}</p>
-                    <button onclick="updateTaskStatus('${t.id}', 'completed')" class="text-xs text-green-600 hover:text-green-800 mt-2">✓ הושלמה</button>
-                  </div>
-                `).join('')}
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            ${taskColumns.map(col => `
+              <div class="bg-white rounded-xl shadow overflow-hidden">
+                <div class="p-4 border-b ${col.border}">
+                  <h3 class="text-sm font-bold" style="color: var(--secondary);">${col.label}</h3>
+                  <p class="text-xs text-gray-500 mt-1">${tasksForColumn(col.status).length} משימות</p>
+                </div>
+                <div class="p-3 min-h-96 ${col.bg} space-y-3"
+                     id="task-col-${col.status}"
+                     ondrop="handleTaskDrop(event, '${col.status}')"
+                     ondragover="handleTaskDragOver(event)"
+                     ondragleave="handleTaskDragLeave(event)"
+                     style="min-height: 400px;">
+                  ${tasksForColumn(col.status).map(t => `
+                    <div class="bg-white p-4 rounded-lg shadow cursor-move hover:shadow-md transition border ${col.border}"
+                         draggable="true"
+                         ondragstart="handleTaskDragStart(event, '${t.id}')"
+                         ondragend="handleTaskDragEnd(event)">
+                      <p class="font-medium ${col.status === 'completed' ? 'line-through text-gray-500' : ''}">${t.title}</p>
+                      <p class="text-xs text-gray-600 mt-1">${priorityLabel[t.priority] || t.priority}</p>
+                      ${t.due_date ? `<p class="text-xs text-gray-500 mt-1">יעד: ${t.due_date}</p>` : ''}
+                      ${t.completed_at ? `<p class="text-xs text-gray-500 mt-1">הושלם: ${new Date(t.completed_at).toLocaleDateString('he-IL')}</p>` : ''}
+                      <div class="flex gap-2 mt-2 flex-wrap">
+                        ${t.status === 'open' ? `<button onclick="updateTaskStatus('${t.id}', 'in_progress')" class="text-xs text-blue-600 hover:text-blue-800">→ בהביצוע</button>` : ''}
+                        ${t.status === 'in_progress' ? `<button onclick="updateTaskStatus('${t.id}', 'completed')" class="text-xs text-green-600 hover:text-green-800">✓ הושלם</button>` : ''}
+                        <button onclick="deleteTask('${t.id}')" class="text-xs text-red-600 hover:text-red-800">🗑️ מחק</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow p-6">
-              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">✅ הושלמו</h3>
-              <div class="space-y-3">
-                ${tasks.filter(t => t.status === 'completed').map(t => `
-                  <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <p class="font-medium line-through text-gray-500">${t.title}</p>
-                    <button onclick="deleteTask('${t.id}')" class="text-xs text-red-600 hover:text-red-800 mt-2">מחק</button>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
+            `).join('')}
           </div>
         `;
 
@@ -586,7 +637,7 @@
                 status: 'open'
               })
             });
-            alert('✓ משימה נוסה');
+            alert('✓ משימה נוספה');
             await loadData();
             renderContent();
           } catch (error) {
@@ -603,15 +654,21 @@
                 <tr>
                   <th class="px-6 py-4 font-bold">אירוע</th>
                   <th class="px-6 py-4 font-bold">תיאור</th>
+                  <th class="px-6 py-4 font-bold">מקור</th>
                   <th class="px-6 py-4 font-bold">תאריך</th>
                 </tr>
               </thead>
               <tbody>
-                ${activities.map(a => `
+                ${activities.length === 0 ? `
+                  <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">אין עדיין פעילות רשומה</td></tr>
+                ` : activities.map(a => `
                   <tr class="border-b hover:bg-gray-50">
                     <td class="px-6 py-4 font-medium">${a.event}</td>
                     <td class="px-6 py-4 text-sm text-gray-600">${a.description || '-'}</td>
-                    <td class="px-6 py-4 text-sm">${new Date(a.created_at).toLocaleDateString('he-IL')}</td>
+                    <td class="px-6 py-4 text-sm">
+                      <span class="px-2 py-1 rounded text-xs font-medium ${a.source === 'api' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}">${a.source === 'api' ? 'API' : 'ידני'}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm">${new Date(a.created_at).toLocaleString('he-IL')}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -628,6 +685,9 @@
                 <option value="customer.created">customer.created</option>
                 <option value="customer.updated">customer.updated</option>
                 <option value="customer.stage_changed">customer.stage_changed</option>
+                <option value="customer.deleted">customer.deleted</option>
+                <option value="task.created">task.created</option>
+                <option value="task.completed">task.completed</option>
               </select>
               <input type="url" placeholder="URL" id="webhookUrl" required class="px-4 py-2 border border-gray-300 rounded-lg">
               <button type="submit" class="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700">הוסף Webhook</button>
@@ -644,7 +704,10 @@
                   </div>
                   <button onclick="deleteWebhook('${w.id}')" class="text-red-600 hover:text-red-800 font-medium">מחק</button>
                 </div>
-                <p class="text-xs text-gray-500">נוצר: ${new Date(w.created_at).toLocaleDateString('he-IL')}</p>
+                <div class="flex justify-between items-center">
+                  <p class="text-xs text-gray-500">נוצר: ${new Date(w.created_at).toLocaleDateString('he-IL')}</p>
+                  <button onclick="viewWebhookLogs('${w.id}')" class="text-xs text-blue-600 hover:text-blue-800">📋 היסטוריית שליחות</button>
+                </div>
               </div>
             `).join('')}
           </div>
@@ -678,7 +741,21 @@
             </form>
           </div>
 
-          <div class="bg-white rounded-xl shadow overflow-hidden">
+          ${lastCreatedApiKey ? `
+            <div class="mb-6 bg-green-50 border-2 border-green-300 rounded-xl p-6">
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-green-800">✓ המפתח "${lastCreatedApiKey.name}" נוצר בהצלחה</h3>
+                <button onclick="dismissApiKeyBanner()" class="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">זו הפעם היחידה שבה המפתח המלא יוצג. העתק ושמור אותו במקום בטוח.</p>
+              <div class="flex gap-2 items-center">
+                <code class="flex-1 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm font-mono break-all">${lastCreatedApiKey.key}</code>
+                <button onclick="copyApiKey('${lastCreatedApiKey.key}')" class="bg-green-600 text-white font-bold px-4 py-2 rounded-lg text-sm hover:bg-green-700 whitespace-nowrap">📋 העתק</button>
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="bg-white rounded-xl shadow overflow-hidden mb-6">
             <table class="w-full">
               <thead class="bg-gray-100">
                 <tr>
@@ -702,6 +779,16 @@
               </tbody>
             </table>
           </div>
+
+          <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200">
+            <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">📚 הכנסת מידע למערכת דרך API</h3>
+            <p class="text-sm text-gray-700 mb-3">ניתן ליצור לקוחות/לידים או משימות ישירות מ-Activepieces או כל מערכת חיצונית, באמצעות ה-API Key בכותרת <code class="bg-white px-1 rounded">x-api-key</code>:</p>
+            <pre class="bg-white border border-blue-200 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">curl -X POST ${API_URL}/customers \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"first_name":"Lead","last_name":"Name","email":"lead@example.com"}'</pre>
+            <p class="text-xs text-gray-600 mt-2">אותו אימות עובד גם עבור <code class="bg-white px-1 rounded">POST ${API_URL}/tasks</code>.</p>
+          </div>
         `;
 
         document.getElementById('apiKeyForm')?.addEventListener('submit', async (e) => {
@@ -711,7 +798,74 @@
               method: 'POST',
               body: JSON.stringify({ name: document.getElementById('keyName').value })
             });
-            alert('✓ API Key: ' + result.key + '\n\nשמור אותו במקום בטוח!');
+            lastCreatedApiKey = result;
+            await loadData();
+            renderContent();
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        });
+
+      } else if (currentView === 'users') {
+        document.getElementById('pageTitle').textContent = '👤 עובדים';
+        content.innerHTML = `
+          <div class="mb-6">
+            <form id="userForm" class="bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-5 gap-2">
+              <input type="text" id="empName" placeholder="שם מלא" required class="px-4 py-2 border border-gray-300 rounded-lg">
+              <input type="email" id="empEmail" placeholder="אימייל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+              <input type="password" id="empPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 rounded-lg">
+              <select id="empRole" class="px-4 py-2 border border-gray-300 rounded-lg">
+                ${Object.entries(ROLE_LABELS).map(([role, label]) => `<option value="${role}">${label}</option>`).join('')}
+              </select>
+              <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף עובד</button>
+            </form>
+          </div>
+
+          <div class="bg-white rounded-xl shadow overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-6 py-4 font-bold">שם</th>
+                  <th class="px-6 py-4 font-bold">אימייל</th>
+                  <th class="px-6 py-4 font-bold">תפקיד</th>
+                  <th class="px-6 py-4 font-bold">נוצר</th>
+                  <th class="px-6 py-4 font-bold">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${employees.map(u => `
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="px-6 py-4 font-medium">${u.name} ${currentUser && u.id === currentUser.id ? '<span class="text-xs text-blue-600">(אתה)</span>' : ''}</td>
+                    <td class="px-6 py-4 text-sm">${u.email}</td>
+                    <td class="px-6 py-4 text-sm">
+                      <select onchange="updateUserRole('${u.id}', this.value)" class="px-2 py-1 border border-gray-300 rounded text-sm" ${currentUser && u.id === currentUser.id ? 'disabled' : ''}>
+                        ${Object.entries(ROLE_LABELS).map(([role, label]) => `<option value="${role}" ${u.role === role ? 'selected' : ''}>${label}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td class="px-6 py-4 text-sm">${new Date(u.created_at).toLocaleDateString('he-IL')}</td>
+                    <td class="px-6 py-4 text-sm">
+                      ${currentUser && u.id === currentUser.id ? '-' : `<button onclick="deleteUser('${u.id}')" class="text-red-600 hover:text-red-800">מחק</button>`}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.getElementById('userForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            await apiCall('/users', {
+              method: 'POST',
+              body: JSON.stringify({
+                name: document.getElementById('empName').value,
+                email: document.getElementById('empEmail').value,
+                password: document.getElementById('empPassword').value,
+                role: document.getElementById('empRole').value
+              })
+            });
+            alert('✓ עובד נוסף');
             await loadData();
             renderContent();
           } catch (error) {
@@ -735,14 +889,35 @@
               </form>
             </div>
 
-            <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200">
+            <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200 mb-6">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📚 כיצד להגדיר את Google Sheets?</h3>
               <ol class="space-y-3 text-sm text-gray-700">
-                <li><span class="font-bold">1.</span> צור גיליון חדש ב-Google Sheets</li>
-                <li><span class="font-bold">2.</span> יצור שורות עם הכותרות הבאות: ID, First Name, Last Name, Email, Phone, Company, Status</li>
-                <li><span class="font-bold">3.</span> שתף את הגיליון עם שרות החשבון של Google API</li>
-                <li><span class="font-bold">4.</span> הדביק את ה-ID הנ״ל</li>
+                <li><span class="font-bold">1.</span> צור קובץ Google Sheets ריק (אחד בלבד, לא צריך ליצור בו גיליונות)</li>
+                <li><span class="font-bold">2.</span> שתף את הקובץ עם כתובת חשבון השירות (Service Account) מ-Google Cloud</li>
+                <li><span class="font-bold">3.</span> הדביק כאן את ה-ID מתוך כתובת ה-URL ולחץ "שמור הגדרות"</li>
+                <li><span class="font-bold">4.</span> המערכת תיצור אוטומטית בתוך אותו קובץ שני גיליונות: <b>לידים</b> ו-<b>משימות</b>, כל אחד עם הכותרות המתאימות</li>
               </ol>
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🏢 ניהול עסקים</h3>
+              <p class="text-xs text-gray-600 mb-4">יצירת עסק חדש יוצרת גם משתמש מנהל נפרד עבורו. כדי לנהל את העסק החדש יש להתנתק ולהתחבר עם הפרטים שהוגדרו כאן.</p>
+              <form id="businessForm" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <input type="text" id="bizName" placeholder="שם העסק" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="text" id="bizAdminName" placeholder="שם מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="email" id="bizAdminEmail" placeholder="אימייל מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="password" id="bizAdminPassword" placeholder="סיסמת מנהל (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <button type="submit" class="md:col-span-2 text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ צור עסק חדש</button>
+              </form>
+
+              ${businesses.length > 0 ? `
+                <div class="border-t pt-4">
+                  <h4 class="text-sm font-bold text-gray-600 mb-2">עסקים קיימים</h4>
+                  <ul class="space-y-1 text-sm">
+                    ${businesses.map(b => `<li class="flex justify-between border-b py-1"><span>${b.name}</span><span class="text-gray-500 text-xs">${new Date(b.created_at).toLocaleDateString('he-IL')}</span></li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
             </div>
           </div>
         `;
@@ -750,11 +925,33 @@
         document.getElementById('settingsForm')?.addEventListener('submit', async (e) => {
           e.preventDefault();
           try {
-            await apiCall('/tenants/me/spreadsheet', {
+            const result = await apiCall('/tenants/me/spreadsheet', {
               method: 'PATCH',
               body: JSON.stringify({ spreadsheet_id: document.getElementById('spreadsheetId').value })
             });
-            alert('✓ הגדרות נשמרו');
+            alert(result.sheets_ready
+              ? '✓ הגדרות נשמרו, הגליונות "לידים" ו"משימות" נוצרו אוטומטית'
+              : `✓ ה-ID נשמר, אך יצירת הגליונות נכשלה: ${result.sheets_error || 'לא ידוע'}`);
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        });
+
+        document.getElementById('businessForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            const result = await apiCall('/tenants', {
+              method: 'POST',
+              body: JSON.stringify({
+                business_name: document.getElementById('bizName').value,
+                admin_name: document.getElementById('bizAdminName').value,
+                admin_email: document.getElementById('bizAdminEmail').value,
+                admin_password: document.getElementById('bizAdminPassword').value
+              })
+            });
+            alert(`✓ העסק "${result.tenant.name}" נוצר. התחבר עם ${result.admin.email} כדי לנהל אותו.`);
+            await loadData();
+            renderContent();
           } catch (error) {
             alert('❌ ' + error.message);
           }
@@ -780,11 +977,67 @@
       }
     };
 
+    window.viewWebhookLogs = async function(id) {
+      try {
+        const result = await apiCall(`/webhooks/${id}/logs`);
+        if (result.data.length === 0) {
+          alert('אין עדיין ניסיונות שליחה עבור Webhook זה. ודא שקרה אירוע מתאים (למשל יצירת לקוח).');
+          return;
+        }
+        const lines = result.data.map(l =>
+          `${new Date(l.created_at).toLocaleString('he-IL')} | ${l.event} | ${l.success ? '✓ הצלחה' : '✗ נכשל'} ${l.status ? `(HTTP ${l.status})` : ''} ${l.error ? '- ' + l.error : ''}`
+        );
+        alert('היסטוריית שליחות:\n\n' + lines.join('\n'));
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
     window.revokeApiKey = async function(id) {
       if (!confirm('בטל API Key?')) return;
       try {
         await apiCall(`/api-keys/${id}`, { method: 'DELETE' });
         alert('✓ API Key בוטל');
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.copyApiKey = async function(key) {
+      try {
+        await navigator.clipboard.writeText(key);
+        alert('✓ הועתק ללוח');
+      } catch (error) {
+        prompt('העתק ידנית (Ctrl+C):', key);
+      }
+    };
+
+    window.dismissApiKeyBanner = function() {
+      lastCreatedApiKey = null;
+      renderContent();
+    };
+
+    window.updateUserRole = async function(id, role) {
+      try {
+        await apiCall(`/users/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ role })
+        });
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+        await loadData();
+        renderContent();
+      }
+    };
+
+    window.deleteUser = async function(id) {
+      if (!confirm('להסיר את העובד?')) return;
+      try {
+        await apiCall(`/users/${id}`, { method: 'DELETE' });
         await loadData();
         renderContent();
       } catch (error) {
@@ -834,22 +1087,6 @@
       try {
         await apiCall(`/pipelines/${id}`, { method: 'DELETE' });
         alert('✓ Pipeline נמחק');
-        await loadData();
-        renderContent();
-      } catch (error) {
-        alert('❌ ' + error.message);
-      }
-    };
-
-    window.addStage = async function(pipelineId) {
-      const stageName = prompt('שם Stage:');
-      if (!stageName) return;
-      try {
-        await apiCall(`/pipelines/${pipelineId}/stages`, {
-          method: 'POST',
-          body: JSON.stringify({ name: stageName })
-        });
-        alert('✓ Stage נוסף');
         await loadData();
         renderContent();
       } catch (error) {
@@ -909,6 +1146,65 @@
 
       draggedCustomerId = null;
       draggedPipelineId = null;
+    };
+
+    // Drag & Drop handlers for Task Kanban
+    let draggedTaskId = null;
+    let taskFilterFrom = '';
+    let taskFilterTo = '';
+
+    window.handleTaskDragStart = function(e, taskId) {
+      draggedTaskId = taskId;
+      e.dataTransfer.effectAllowed = 'move';
+      e.target.style.opacity = '0.5';
+    };
+
+    window.handleTaskDragEnd = function(e) {
+      e.target.style.opacity = '1';
+    };
+
+    window.handleTaskDragOver = function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      e.target.closest('[id^="task-col-"]')?.style.setProperty('background-color', '#E0E7FF', 'important');
+    };
+
+    window.handleTaskDragLeave = function(e) {
+      const colEl = e.target.closest('[id^="task-col-"]');
+      if (colEl) colEl.style.removeProperty('background-color');
+    };
+
+    window.handleTaskDrop = async function(e, status) {
+      e.preventDefault();
+      const colEl = e.target.closest('[id^="task-col-"]');
+      if (colEl) colEl.style.removeProperty('background-color');
+
+      if (!draggedTaskId) return;
+
+      try {
+        await apiCall(`/tasks/${draggedTaskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        });
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+
+      draggedTaskId = null;
+    };
+
+    window.applyTaskDateFilter = function() {
+      taskFilterFrom = document.getElementById('taskFilterFrom').value;
+      taskFilterTo = document.getElementById('taskFilterTo').value;
+      renderContent();
+    };
+
+    window.clearTaskDateFilter = function() {
+      taskFilterFrom = '';
+      taskFilterTo = '';
+      renderContent();
     };
 
     async function render() {

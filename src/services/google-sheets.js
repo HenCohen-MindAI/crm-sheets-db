@@ -81,6 +81,48 @@ export async function updateRange(spreadsheetId, range, values) {
   }
 }
 
+// One spreadsheet file, separate tabs per entity - created automatically on connect
+export const LEADS_TASKS_SCHEMA = [
+  {
+    title: 'לידים',
+    headers: ['ID', 'שם פרטי', 'שם משפחה', 'אימייל', 'טלפון', 'חברה', 'Pipeline', 'שלב', 'סטטוס', 'נוצר בתאריך']
+  },
+  {
+    title: 'משימות',
+    headers: ['ID', 'כותרת', 'תיאור', 'לקוח', 'עדיפות', 'סטטוס', 'תאריך יעד', 'הושלם בתאריך', 'נוצר בתאריך']
+  }
+];
+
+export async function ensureSheetsStructure(spreadsheetId, schema) {
+  if (!sheetsClient) {
+    throw new Error('Google Sheets not initialized - upload credentials.json first');
+  }
+
+  const meta = await sheetsClient.spreadsheets.get({ spreadsheetId });
+  const existingTitles = new Set((meta.data.sheets || []).map(s => s.properties.title));
+  const missing = schema.filter(s => !existingTitles.has(s.title));
+
+  if (missing.length > 0) {
+    await sheetsClient.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: missing.map(s => ({ addSheet: { properties: { title: s.title } } }))
+      }
+    });
+  }
+
+  for (const sheet of schema) {
+    const range = `${sheet.title}!A1:${String.fromCharCode(64 + sheet.headers.length)}1`;
+    const headerRow = await readRange(spreadsheetId, range);
+    const hasHeaders = headerRow.values?.[0]?.length > 0;
+    if (!hasHeaders) {
+      await updateRange(spreadsheetId, range, [sheet.headers]);
+    }
+  }
+
+  return true;
+}
+
 export async function clearRange(spreadsheetId, range) {
   if (!sheetsClient) return null;
 
