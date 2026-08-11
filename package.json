@@ -1,19 +1,20 @@
 {
   "name": "crm-sheets-db",
-  "version": "0.1.0",
-  "description": "Multi-tenant CRM with Google Sheets as database",
-  "main": "src/index.js",
+  "version": "1.0.0",
+  "description": "Lightweight Multi-Tenant CRM with Google Sheets",
+  "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.3.1",
     "jsonwebtoken": "^9.0.0",
-    "googleapis": "^118.0.0",
     "google-auth-library": "^9.0.0",
-    "cors": "^2.8.5"
+    "googleapis": "^118.0.0",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.0"
   }
 }

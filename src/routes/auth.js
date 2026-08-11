@@ -3,29 +3,39 @@ import { generateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Mock login for testing
-// In production, this would integrate with Google OAuth or your auth system
+// Mock login - replace with real auth later
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
 
-  // Mock user - replace with real auth
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  // Mock validation
   if (email === 'admin@test.com' && password === 'password') {
     const token = generateToken(
       'user-1',
       'tenant-1',
+      'admin',
       [
         'customers.view',
         'customers.view_all',
         'customers.create',
         'customers.edit',
         'customers.delete',
+        'pipelines.view',
+        'pipelines.create',
+        'stages.create',
+        'tasks.view',
+        'tasks.create',
+        'notes.view',
+        'notes.create',
+        'webhooks.view',
+        'api.view',
         'users.view',
-        'users.create',
-        'users.edit',
-        'users.delete',
         'settings.view',
         'settings.edit',
-        'google.manage',
+        'google.manage'
       ]
     );
 
@@ -34,37 +44,18 @@ router.post('/login', (req, res) => {
       user: {
         id: 'user-1',
         email,
+        name: 'Admin User',
         role: 'admin',
-      },
+        tenantId: 'tenant-1'
+      }
     });
   }
 
   res.status(401).json({ error: 'Invalid credentials' });
 });
 
-// Mock tenant setup (for testing)
-router.post('/setup-tenant', (req, res) => {
-  const { name, spreadsheetId } = req.body;
-
-  if (!name || !spreadsheetId) {
-    return res.status(400).json({ error: 'Missing name or spreadsheetId' });
-  }
-
-  // Mock response - replace with real tenant creation
-  const token = generateToken(
-    'user-1',
-    'tenant-1',
-    ['settings.edit', 'google.manage']
-  );
-
-  res.json({
-    tenant: {
-      id: 'tenant-1',
-      name,
-      spreadsheetId,
-    },
-    token,
-  });
+router.post('/logout', (req, res) => {
+  res.json({ message: 'Logged out successfully' });
 });
 
 export default router;

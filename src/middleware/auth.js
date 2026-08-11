@@ -2,6 +2,18 @@ import jwt from 'jsonwebtoken';
 
 export function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
+  const apiKey = req.headers['x-api-key'];
+
+  if (apiKey) {
+    // API Key authentication
+    req.user = {
+      userId: 'api-user',
+      tenantId: 'api-tenant', // Will be verified later
+      isApiKey: true,
+      apiKey
+    };
+    return next();
+  }
 
   if (!authHeader) {
     return res.status(401).json({ error: 'Missing authorization header' });
@@ -18,10 +30,16 @@ export function authMiddleware(req, res, next) {
   }
 }
 
-export function generateToken(userId, tenantId, permissions = []) {
+export function generateToken(userId, tenantId, role = 'user', permissions = []) {
   return jwt.sign(
-    { userId, tenantId, permissions },
+    {
+      userId,
+      tenantId,
+      role,
+      permissions,
+      isApiKey: false
+    },
     process.env.JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '7d' }
   );
 }

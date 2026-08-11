@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let sheetsClient = null;
 let authClient = null;
 
-export async function initGoogleSheets() {
+export async function initializeGoogleSheets() {
   const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || path.join(__dirname, '../../credentials.json');
 
   try {
@@ -20,20 +20,20 @@ export async function initGoogleSheets() {
     sheetsClient = google.sheets({ version: 'v4', auth: authClient });
     console.log('✅ Google Sheets API authenticated');
   } catch (error) {
-    console.error('⚠️  Google Sheets not configured. Using mock mode.');
-    console.error('   Create credentials.json from Google Cloud Console');
+    console.warn('⚠️  Google Sheets not configured yet');
+    console.warn('   Create credentials.json from Google Cloud Console');
   }
 }
 
 export async function getSheets() {
+  if (!sheetsClient) {
+    throw new Error('Google Sheets not initialized');
+  }
   return sheetsClient;
 }
 
 export async function readRange(spreadsheetId, range) {
-  if (!sheetsClient) {
-    console.warn('⚠️  Google Sheets not initialized');
-    return { values: [] };
-  }
+  if (!sheetsClient) return { values: [] };
 
   try {
     const response = await sheetsClient.spreadsheets.values.get({
@@ -42,16 +42,13 @@ export async function readRange(spreadsheetId, range) {
     });
     return response.data;
   } catch (error) {
-    console.error('Error reading sheet:', error);
+    console.error('Error reading sheet:', error.message);
     throw error;
   }
 }
 
 export async function appendRows(spreadsheetId, range, values) {
-  if (!sheetsClient) {
-    console.warn('⚠️  Google Sheets not initialized');
-    return null;
-  }
+  if (!sheetsClient) return null;
 
   try {
     const response = await sheetsClient.spreadsheets.values.append({
@@ -62,16 +59,13 @@ export async function appendRows(spreadsheetId, range, values) {
     });
     return response.data;
   } catch (error) {
-    console.error('Error appending rows:', error);
+    console.error('Error appending rows:', error.message);
     throw error;
   }
 }
 
 export async function updateRange(spreadsheetId, range, values) {
-  if (!sheetsClient) {
-    console.warn('⚠️  Google Sheets not initialized');
-    return null;
-  }
+  if (!sheetsClient) return null;
 
   try {
     const response = await sheetsClient.spreadsheets.values.update({
@@ -82,16 +76,13 @@ export async function updateRange(spreadsheetId, range, values) {
     });
     return response.data;
   } catch (error) {
-    console.error('Error updating range:', error);
+    console.error('Error updating range:', error.message);
     throw error;
   }
 }
 
 export async function clearRange(spreadsheetId, range) {
-  if (!sheetsClient) {
-    console.warn('⚠️  Google Sheets not initialized');
-    return null;
-  }
+  if (!sheetsClient) return null;
 
   try {
     const response = await sheetsClient.spreadsheets.values.clear({
@@ -100,7 +91,7 @@ export async function clearRange(spreadsheetId, range) {
     });
     return response.data;
   } catch (error) {
-    console.error('Error clearing range:', error);
+    console.error('Error clearing range:', error.message);
     throw error;
   }
 }
