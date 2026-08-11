@@ -14,6 +14,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cors());
 
+// Public status check (no auth required)
+app.get('/status', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
+});
+
 // Routes
 app.use('/auth', authRoutes);
 
