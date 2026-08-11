@@ -6,6 +6,9 @@ import { fileURLToPath } from 'url';
 import { initializeGoogleSheets } from './services/google-sheets.js';
 import authRoutes from './routes/auth.js';
 import customerRoutes from './routes/customers.js';
+import pipelineRoutes from './routes/pipelines.js';
+import taskRoutes from './routes/tasks.js';
+import noteRoutes from './routes/notes.js';
 import { authMiddleware } from './middleware/auth.js';
 import { tenantMiddleware } from './middleware/tenant.js';
 import { errorHandler } from './middleware/errors.js';
@@ -44,6 +47,9 @@ app.use(tenantMiddleware);
 
 // API routes
 app.use('/api/customers', customerRoutes);
+app.use('/api/pipelines', pipelineRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/notes', noteRoutes);
 
 // Catch-all for SPA
 app.get('*', (req, res) => {
