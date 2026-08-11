@@ -464,7 +464,6 @@
             alert('❌ ' + error.message);
           }
         };
-      }
 
       } else if (currentView === 'tasks') {
         document.getElementById('pageTitle').textContent = '✓ משימות';
@@ -827,12 +826,14 @@
     };
 
     window.handleDragLeave = function(e) {
-      e.target.closest('[id^="stage-"]')?.style.backgroundColor = '#F9FAFB';
+      const stageEl = e.target.closest('[id^="stage-"]');
+      if (stageEl) stageEl.style.backgroundColor = '#F9FAFB';
     };
 
     window.handleDrop = async function(e, pipelineId, stageId) {
       e.preventDefault();
-      e.target.closest('[id^="stage-"]')?.style.backgroundColor = '#F9FAFB';
+      const stageEl = e.target.closest('[id^="stage-"]');
+      if (stageEl) stageEl.style.backgroundColor = '#F9FAFB';
 
       if (!draggedCustomerId || draggedPipelineId !== pipelineId) {
         alert('❌ לא ניתן להעביר בין Pipelines שונים');
