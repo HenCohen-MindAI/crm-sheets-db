@@ -1,10 +1,14 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { requirePermission } from '../middleware/tenant.js';
+import { getCustomerRepository } from '../services/data-service.js';
+import { getTenantSpreadsheetId } from '../services/tenant-service.js';
+import { triggerWebhook } from './webhooks.js';
+import { logActivity } from './activity.js';
 
 const router = express.Router();
 
-// Mock customer database (will be Google Sheets)
+// Mock customer database (fallback)
 const customers = new Map();
 
 router.get('/', requirePermission('customers.view'), (req, res) => {
