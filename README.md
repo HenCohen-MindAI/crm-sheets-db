@@ -42,15 +42,18 @@ Edit `.env` and add:
 docker-compose up
 ```
 
-Server starts on `http://localhost:3000`
+Server starts on `http://localhost:3050` (or your configured port in `docker-compose.yml`)
+
+**To change port:**
+Edit `docker-compose.yml` and change `"3050:3000"` to your desired port (e.g., `"3001:3000"`)
 
 ## API
 
 ### Authentication
 
 ```bash
-# Login (mock)
-curl -X POST http://localhost:3000/auth/login \
+# Login (mock) - Replace 3050 with your port
+curl -X POST http://localhost:3050/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@test.com","password":"password"}'
 ```
@@ -66,7 +69,8 @@ Response:
 ### Protected Endpoint
 
 ```bash
-curl http://localhost:3000/health \
+# Replace 3050 with your port and YOUR_TOKEN with the token from login
+curl http://localhost:3050/health \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
