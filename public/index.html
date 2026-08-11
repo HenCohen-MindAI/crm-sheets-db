@@ -6,11 +6,37 @@
   <title>CRM Pro - System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    :root {
+      --primary: #5B9FFF;
+      --secondary: #001F5C;
+      --accent: #4A8FFF;
+      --light: #F0F6FF;
+    }
+
     * { direction: rtl; text-align: right; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
     input, textarea, select { direction: ltr; text-align: left; }
-    .sidebar-item.active { @apply bg-blue-100 border-r-4 border-blue-600 text-blue-900 font-bold; }
-    .sidebar-item { @apply transition-all duration-200 hover:bg-blue-500; }
+
+    .logo-svg { width: 40px; height: 40px; }
+    .sidebar-header { background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%); }
+    .sidebar-item.active {
+      background-color: var(--light);
+      border-right: 4px solid var(--primary);
+      color: var(--secondary);
+      font-weight: bold;
+    }
+    .sidebar-item {
+      transition: all 0.2s ease;
+      color: white;
+      margin: 4px 0;
+    }
+    .sidebar-item:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding-right: 8px;
+    }
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--accent); }
+    .header-gradient { background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%); }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -88,15 +114,41 @@
 
     function renderLogin() {
       return `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600 p-4">
+        <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);">
           <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-            <h1 class="text-4xl font-bold text-center text-gray-800 mb-2">🚀 CRM Pro</h1>
-            <p class="text-center text-gray-600 mb-8">מערכת ניהול לקוחות מקצועית</p>
+            <div class="text-center mb-8">
+              <svg viewBox="0 0 160 60" class="logo-svg mx-auto mb-4" style="width: 160px; height: 60px;">
+                <!-- Brain icon -->
+                <g fill="#5B9FFF" opacity="0.8">
+                  <path d="M30,25 Q25,15 20,15 Q10,15 10,25 Q10,35 20,40 L30,40 Z" stroke="#001F5C" stroke-width="1"/>
+                  <circle cx="15" cy="22" r="2" fill="#001F5C"/>
+                  <circle cx="18" cy="28" r="2" fill="#001F5C"/>
+                  <circle cx="15" cy="35" r="2" fill="#001F5C"/>
+                </g>
+                <!-- M shape -->
+                <path d="M50,45 L50,15 L60,30 L70,15 L70,45" stroke="#001F5C" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <!-- AI text -->
+                <text x="85" y="35" font-size="24" font-weight="bold" fill="#001F5C" font-family="Arial">AI</text>
+              </svg>
+              <h1 class="text-3xl font-bold" style="color: var(--secondary);">MIND AI</h1>
+              <p class="text-gray-600 text-sm mt-2">CRM מקצועי לניהול לקוחות ועסקים</p>
+            </div>
+
             <form id="loginForm" class="space-y-4">
-              <input type="email" id="email" value="admin@test.com" placeholder="דוא״ל" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-              <input type="password" id="password" value="password" placeholder="סיסמה" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-              <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-lg hover:shadow-lg">התחבר</button>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">דוא״ל</label>
+                <input type="email" id="email" value="admin@test.com" placeholder="admin@test.com" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" style="focus-ring-color: var(--primary);">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">סיסמה</label>
+                <input type="password" id="password" value="password" placeholder="סיסמה" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2" style="focus-ring-color: var(--primary);">
+              </div>
+              <button type="submit" class="w-full text-white font-bold py-3 rounded-lg hover:shadow-lg transition" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">התחבר</button>
             </form>
+
+            <div class="text-center text-xs text-gray-500 mt-6">
+              <p>Demo: admin@test.com / password</p>
+            </div>
           </div>
         </div>
       `;
@@ -107,9 +159,17 @@
 
       return `
         <div class="flex h-screen bg-gray-50">
-          <div class="w-64 bg-gradient-to-b from-blue-600 to-purple-600 text-white shadow-lg overflow-y-auto">
-            <div class="p-6 border-b border-blue-500">
-              <h1 class="text-2xl font-bold">🚀 CRM Pro</h1>
+          <div class="w-64 text-white shadow-lg overflow-y-auto" style="background: linear-gradient(180deg, var(--secondary) 0%, var(--accent) 100%);">
+            <div class="p-6 border-b border-blue-300 sidebar-header">
+              <div class="flex items-center gap-2 justify-end mb-2">
+                <h1 class="text-xl font-bold">MIND AI CRM</h1>
+                <svg viewBox="0 0 40 40" class="logo-svg" style="width: 30px; height: 30px;">
+                  <path d="M12,18 Q10,12 8,12 Q4,12 4,18 Q4,22 8,24 L12,24 Z" fill="var(--light)" stroke="white" stroke-width="0.5"/>
+                  <circle cx="6" cy="16" r="1" fill="white"/>
+                  <circle cx="7" cy="20" r="1" fill="white"/>
+                </svg>
+              </div>
+              <p class="text-xs text-gray-200">ניהול לקוחות ועסקים</p>
             </div>
             <nav class="p-4 space-y-2">
               ${['dashboard', 'customers', 'pipelines', 'tasks', 'activity', 'webhooks', 'api-keys', 'settings'].map(view => `
@@ -145,7 +205,272 @@
     async function renderContent() {
       const content = document.getElementById('content');
 
-      if (currentView === 'activity') {
+      if (currentView === 'dashboard') {
+        document.getElementById('pageTitle').textContent = '📊 לוח בקרה';
+        const activeCustomers = customers.filter(c => c.status === 'active').length;
+        const thisMonth = new Date().getMonth();
+        const monthCustomers = customers.filter(c => new Date(c.created_at).getMonth() === thisMonth).length;
+        const taskCount = tasks.length;
+        const completedTasks = tasks.filter(t => t.status === 'completed').length;
+
+        content.innerHTML = `
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--primary);">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-gray-600 text-sm">לקוחות פעילים</p>
+                  <p class="text-4xl font-bold" style="color: var(--secondary);">${activeCustomers}</p>
+                </div>
+                <span class="text-3xl">👥</span>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--accent);">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-gray-600 text-sm">לקוחות חדשים החודש</p>
+                  <p class="text-4xl font-bold" style="color: var(--secondary);">${monthCustomers}</p>
+                </div>
+                <span class="text-3xl">📈</span>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--primary);">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-gray-600 text-sm">משימות כללי</p>
+                  <p class="text-4xl font-bold" style="color: var(--secondary);">${taskCount}</p>
+                </div>
+                <span class="text-3xl">✓</span>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--accent);">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-gray-600 text-sm">משימות שהושלמו</p>
+                  <p class="text-4xl font-bold" style="color: var(--secondary);">${completedTasks}/${taskCount}</p>
+                </div>
+                <span class="text-3xl">✅</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow p-6">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🔥 לקוחות אחרונים</h3>
+              <div class="space-y-3">
+                ${customers.slice(-5).reverse().map(c => `
+                  <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p class="font-medium">${c.first_name} ${c.last_name}</p>
+                      <p class="text-sm text-gray-600">${c.email}</p>
+                    </div>
+                    <span class="text-xs px-3 py-1 rounded-full" style="background: var(--light); color: var(--secondary);">חדש</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-6">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📋 פעילויות אחרונות</h3>
+              <div class="space-y-3">
+                ${activities.slice(-5).reverse().map(a => `
+                  <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p class="font-medium text-sm">${a.description || a.event}</p>
+                      <p class="text-xs text-gray-600">${new Date(a.created_at).toLocaleDateString('he-IL')}</p>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+
+      } else if (currentView === 'customers') {
+        document.getElementById('pageTitle').textContent = '👥 לקוחות';
+        content.innerHTML = `
+          <div class="mb-6">
+            <form id="customerForm" class="bg-white p-6 rounded-xl shadow space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="firstName" placeholder="שם פרטי" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="text" id="lastName" placeholder="שם משפחה" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="email" id="email" placeholder="דוא״ל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="phone" id="phone" placeholder="טלפון" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="text" id="company" placeholder="חברה" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף לקוח</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="bg-white rounded-xl shadow overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-6 py-4 font-bold" style="color: var(--secondary);">שם</th>
+                  <th class="px-6 py-4 font-bold" style="color: var(--secondary);">דוא״ל</th>
+                  <th class="px-6 py-4 font-bold" style="color: var(--secondary);">טלפון</th>
+                  <th class="px-6 py-4 font-bold" style="color: var(--secondary);">חברה</th>
+                  <th class="px-6 py-4 font-bold" style="color: var(--secondary);">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${customers.filter(c => c.status !== 'deleted').map(c => `
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="px-6 py-4 font-medium">${c.first_name} ${c.last_name}</td>
+                    <td class="px-6 py-4">${c.email}</td>
+                    <td class="px-6 py-4">${c.phone || '-'}</td>
+                    <td class="px-6 py-4">${c.company || '-'}</td>
+                    <td class="px-6 py-4 text-sm">
+                      <button onclick="deleteCustomer('${c.id}')" class="text-red-600 hover:text-red-800">מחק</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.getElementById('customerForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            await apiCall('/customers', {
+              method: 'POST',
+              body: JSON.stringify({
+                first_name: document.getElementById('firstName').value,
+                last_name: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                company: document.getElementById('company').value
+              })
+            });
+            alert('✓ לקוח נוסף');
+            await loadData();
+            renderContent();
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        });
+
+      } else if (currentView === 'pipelines') {
+        document.getElementById('pageTitle').textContent = '🎯 Pipelines';
+        content.innerHTML = `
+          <div class="mb-6">
+            <form id="pipelineForm" class="bg-white p-6 rounded-xl shadow flex gap-2">
+              <input type="text" id="pipelineName" placeholder="שם Pipeline" required class="flex-1 px-4 py-2 border border-gray-300 rounded-lg">
+              <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ יצור Pipeline</button>
+            </form>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${pipelines.map(p => `
+              <div class="bg-white rounded-xl shadow p-6">
+                <div class="flex justify-between items-start mb-4">
+                  <h3 class="text-lg font-bold" style="color: var(--secondary);">${p.name}</h3>
+                  <button onclick="deletePipeline('${p.id}')" class="text-red-600 hover:text-red-800">✕</button>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">Stages: ${p.stages?.length || 0}</p>
+                <form id="stageForm-${p.id}" class="flex gap-2">
+                  <input type="text" placeholder="שם Stage" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <button type="button" onclick="addStage('${p.id}')" class="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm">הוסף</button>
+                </form>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        document.getElementById('pipelineForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            await apiCall('/pipelines', {
+              method: 'POST',
+              body: JSON.stringify({ name: document.getElementById('pipelineName').value })
+            });
+            alert('✓ Pipeline נוצר');
+            await loadData();
+            renderContent();
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        });
+
+      } else if (currentView === 'tasks') {
+        document.getElementById('pageTitle').textContent = '✓ משימות';
+        content.innerHTML = `
+          <div class="mb-6">
+            <form id="taskForm" class="bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-4 gap-2">
+              <input type="text" id="taskTitle" placeholder="כותרת משימה" required class="px-4 py-2 border border-gray-300 rounded-lg">
+              <select id="taskPriority" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="low">👇 נמוכה</option>
+                <option value="medium">➡️ בינונית</option>
+                <option value="high">👆 גבוהה</option>
+              </select>
+              <input type="date" id="taskDue" class="px-4 py-2 border border-gray-300 rounded-lg">
+              <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף משימה</button>
+            </form>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow p-6">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📋 פתוח</h3>
+              <div class="space-y-3">
+                ${tasks.filter(t => t.status === 'open').map(t => `
+                  <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p class="font-medium">${t.title}</p>
+                    <p class="text-xs text-gray-600 mt-1">Priority: ${t.priority}</p>
+                    <button onclick="updateTaskStatus('${t.id}', 'in_progress')" class="text-xs text-blue-600 hover:text-blue-800 mt-2">→ בהביצוע</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-6">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">⚙️ בהביצוע</h3>
+              <div class="space-y-3">
+                ${tasks.filter(t => t.status === 'in_progress').map(t => `
+                  <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <p class="font-medium">${t.title}</p>
+                    <button onclick="updateTaskStatus('${t.id}', 'completed')" class="text-xs text-green-600 hover:text-green-800 mt-2">✓ הושלמה</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-6">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">✅ הושלמו</h3>
+              <div class="space-y-3">
+                ${tasks.filter(t => t.status === 'completed').map(t => `
+                  <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <p class="font-medium line-through text-gray-500">${t.title}</p>
+                    <button onclick="deleteTask('${t.id}')" class="text-xs text-red-600 hover:text-red-800 mt-2">מחק</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            await apiCall('/tasks', {
+              method: 'POST',
+              body: JSON.stringify({
+                title: document.getElementById('taskTitle').value,
+                priority: document.getElementById('taskPriority').value,
+                due_date: document.getElementById('taskDue').value,
+                status: 'open'
+              })
+            });
+            alert('✓ משימה נוסה');
+            await loadData();
+            renderContent();
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        });
+
+      } else if (currentView === 'activity') {
         document.getElementById('pageTitle').textContent = '📝 פעילות';
         content.innerHTML = `
           <div class="bg-white rounded-xl shadow overflow-hidden">
@@ -269,6 +594,47 @@
             alert('❌ ' + error.message);
           }
         });
+
+      } else if (currentView === 'settings') {
+        document.getElementById('pageTitle').textContent = '⚙️ הגדרות';
+        content.innerHTML = `
+          <div class="max-w-2xl">
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🔗 חיבור Google Sheets</h3>
+              <form id="settingsForm" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2" style="color: var(--secondary);">Spreadsheet ID</label>
+                  <input type="text" id="spreadsheetId" placeholder="הדביק את ה-Spreadsheet ID מ-Google Sheets" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg">
+                  <p class="text-xs text-gray-600 mt-2">ניתן למצוא בכתובת ה-URL של הגיליון: /spreadsheets/d/<b>ID</b>/edit</p>
+                </div>
+                <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">💾 שמור הגדרות</button>
+              </form>
+            </div>
+
+            <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200">
+              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📚 כיצד להגדיר את Google Sheets?</h3>
+              <ol class="space-y-3 text-sm text-gray-700">
+                <li><span class="font-bold">1.</span> צור גיליון חדש ב-Google Sheets</li>
+                <li><span class="font-bold">2.</span> יצור שורות עם הכותרות הבאות: ID, First Name, Last Name, Email, Phone, Company, Status</li>
+                <li><span class="font-bold">3.</span> שתף את הגיליון עם שרות החשבון של Google API</li>
+                <li><span class="font-bold">4.</span> הדביק את ה-ID הנ״ל</li>
+              </ol>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('settingsForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            await apiCall('/tenants/me/spreadsheet', {
+              method: 'PATCH',
+              body: JSON.stringify({ spreadsheet_id: document.getElementById('spreadsheetId').value })
+            });
+            alert('✓ הגדרות נשמרו');
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        });
       }
     }
 
@@ -295,6 +661,71 @@
       try {
         await apiCall(`/api-keys/${id}`, { method: 'DELETE' });
         alert('✓ API Key בוטל');
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.deleteCustomer = async function(id) {
+      if (!confirm('מחק לקוח?')) return;
+      try {
+        await apiCall(`/customers/${id}`, { method: 'DELETE' });
+        alert('✓ לקוח נמחק');
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.deleteTask = async function(id) {
+      if (!confirm('מחק משימה?')) return;
+      try {
+        await apiCall(`/tasks/${id}`, { method: 'DELETE' });
+        alert('✓ משימה נמחקה');
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.updateTaskStatus = async function(id, status) {
+      try {
+        await apiCall(`/tasks/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        });
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.deletePipeline = async function(id) {
+      if (!confirm('מחק Pipeline?')) return;
+      try {
+        await apiCall(`/pipelines/${id}`, { method: 'DELETE' });
+        alert('✓ Pipeline נמחק');
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.addStage = async function(pipelineId) {
+      const stageName = prompt('שם Stage:');
+      if (!stageName) return;
+      try {
+        await apiCall(`/pipelines/${pipelineId}/stages`, {
+          method: 'POST',
+          body: JSON.stringify({ name: stageName })
+        });
+        alert('✓ Stage נוסף');
         await loadData();
         renderContent();
       } catch (error) {
