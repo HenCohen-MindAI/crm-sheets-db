@@ -12,6 +12,7 @@ import noteRoutes from './routes/notes.js';
 import activityRoutes from './routes/activity.js';
 import webhookRoutes from './routes/webhooks.js';
 import apiKeyRoutes from './routes/api-keys.js';
+import tenantRoutes from './routes/tenants.js';
 import { authMiddleware } from './middleware/auth.js';
 import { tenantMiddleware } from './middleware/tenant.js';
 import { errorHandler } from './middleware/errors.js';
@@ -56,6 +57,7 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/api-keys', apiKeyRoutes);
+app.use('/api/tenants', tenantRoutes);
 
 // Catch-all for SPA
 app.get('*', (req, res) => {

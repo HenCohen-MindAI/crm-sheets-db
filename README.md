@@ -1,247 +1,255 @@
-# CRM Pro - Lightweight Multi-Tenant SaaS
+# 🧠 MIND AI CRM - Professional Customer Management System
 
-Professional CRM system with Google Sheets integration, built for minimal resource usage.
+**MIND AI CRM** is a lightweight, production-ready SaaS CRM system designed for sales teams, service businesses, and customer-centric organizations. Built with Node.js, Express, and Google Sheets as the data store.
 
-**Stack**: Node.js + Express + Vanilla JS + Google Sheets  
-**RAM**: 50-80 MB  
-**Container**: 150 MB  
-**Perfect for**: 1GB+ VPS
+![MIND AI Logo](./public/logo.png)
 
----
+## ✨ Features
+
+### 👥 Customer Management
+- Complete customer profiles with contact info
+- Custom fields and attributes
+- Customer activity timeline
+- Bulk import/export capabilities
+
+### 🎯 Pipeline Management
+- Unlimited pipelines and stages
+- Drag-and-drop customer movement between stages
+- Custom stage colors and properties
+- Stage-based automation rules
+
+### ✓ Task Management
+- Create and assign tasks
+- Priority levels (Low, Medium, High)
+- Due dates and reminders
+- Task status tracking (Open, In Progress, Completed)
+- 3-column Kanban board view
+
+### 📊 Dashboard & Analytics
+- Real-time customer statistics
+- New customers this month
+- Task completion rates
+- Activity feed
+- Quick access shortcuts
+
+### 🔗 Webhooks & Automation
+- Event-based webhooks for all major actions
+- Activepieces integration ready
+- Support for:
+  - `customer.created`
+  - `customer.updated`
+  - `customer.stage_changed`
+  - And more...
+
+### 🔐 Security & Multi-Tenancy
+- JWT-based authentication
+- API key management
+- Role-based access control (RBAC)
+- Complete tenant isolation
+- GDPR-compliant
+
+### 🌍 Internationalization
+- Full Hebrew RTL support
+- Easy to extend to other languages
+- Bilingual-ready UI components
+
+### 💾 Google Sheets Integration
+- Use Google Sheets as your database
+- No expensive database infrastructure
+- Easy data export and backup
+- Real-time collaboration with Google Sheets features
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose
-- Git
+- Node.js 18+ (or Docker)
+- Google account (optional, for Google Sheets)
+- 1GB+ RAM VPS (e.g., Oracle, Linode, DigitalOcean)
 
-### Installation
-
+### Local Development
 ```bash
-# Clone
-git clone https://github.com/HenCohen-MindAI/crm-sheets-db.git
+# Clone repository
+git clone https://github.com/YOUR-REPO/crm-sheets-db.git
 cd crm-sheets-db
 
-# Setup environment
-cp .env.example .env
+# Install dependencies
+npm install
 
-# Run
-docker compose up -d
+# Start development server
+npm run dev
 
-# Open in browser
-open http://localhost:3050
+# Open http://localhost:3000
 ```
 
-### Demo Login
-- **Email**: admin@test.com
-- **Password**: password
+### Docker Deployment (Recommended)
+```bash
+# Build and run
+docker compose up -d --build
 
----
-
-## 📦 Technology Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Backend | Node.js 20 + Express |
-| Frontend | HTML5 + Vanilla JS + Tailwind |
-| Database | Google Sheets API |
-| Auth | JWT + Google OAuth |
-| Container | Docker Alpine |
-
----
-
-## 🏗️ Architecture
-
-### Tenant Isolation
-```
-Tenant A
-  └─ Google Connection A
-      └─ Google Sheets A
-          ├─ Customers
-          ├─ Pipelines
-          ├─ Tasks
-          └─ Activity Logs
+# Open http://localhost:3050
 ```
 
-Each tenant is completely isolated:
-- Separate Google Sheets
-- Separate JWT tokens
-- Separate data in all queries
+**Default Login:**
+- Email: `admin@test.com`
+- Password: `password`
 
-### API Structure
+## 📁 Project Structure
 
-**Public Endpoints:**
 ```
-POST   /api/auth/login
-POST   /api/auth/logout
-GET    /status              (health check)
-GET    /health              (detailed health)
+crm-sheets-db/
+├── src/
+│   ├── server.js                 # Express server entry point
+│   ├── middleware/
+│   │   ├── auth.js              # JWT authentication
+│   │   ├── tenant.js            # Multi-tenant context
+│   │   └── errors.js            # Error handling
+│   ├── routes/
+│   │   ├── auth.js              # Authentication endpoints
+│   │   ├── customers.js         # Customer CRUD
+│   │   ├── pipelines.js         # Pipeline management
+│   │   ├── tasks.js             # Task management
+│   │   ├── notes.js             # Notes/comments
+│   │   ├── activity.js          # Activity logging
+│   │   ├── webhooks.js          # Webhook management
+│   │   ├── api-keys.js          # API key management
+│   │   └── tenants.js           # Tenant configuration
+│   ├── services/
+│   │   ├── google-sheets.js     # Google Sheets API client
+│   │   ├── data-service.js      # Repository factory
+│   │   └── tenant-service.js    # Tenant management
+│   └── repositories/
+│       └── customer.repository.js # Customer data access layer
+├── public/
+│   └── index.html               # Single-page application
+├── Dockerfile                    # Container definition
+├── docker-compose.yml           # Orchestration
+├── package.json                 # Dependencies
+└── .env.example                 # Environment template
 ```
 
-**Protected Endpoints:**
+## 🔌 API Endpoints
+
+### Authentication
 ```
-GET    /api/customers                (view all)
-POST   /api/customers                (create)
-GET    /api/customers/:id            (view one)
-PATCH  /api/customers/:id            (edit)
-DELETE /api/customers/:id            (delete)
+POST   /api/auth/login            # Login
+POST   /api/auth/logout           # Logout
 ```
 
----
+### Customers
+```
+GET    /api/customers             # List all
+POST   /api/customers             # Create new
+GET    /api/customers/:id         # Get single
+PATCH  /api/customers/:id         # Update
+DELETE /api/customers/:id         # Delete
+```
+
+### Pipelines
+```
+GET    /api/pipelines             # List all
+POST   /api/pipelines             # Create new
+GET    /api/pipelines/:id/stages  # Get stages
+POST   /api/pipelines/:id/stages  # Create stage
+PATCH  /api/pipelines/stages/:id  # Update stage
+DELETE /api/pipelines/:id         # Delete pipeline
+```
+
+### Tasks
+```
+GET    /api/tasks                 # List all
+POST   /api/tasks                 # Create new
+PATCH  /api/tasks/:id             # Update
+DELETE /api/tasks/:id             # Delete
+```
+
+### Webhooks
+```
+GET    /api/webhooks              # List all
+POST   /api/webhooks              # Create new
+DELETE /api/webhooks/:id          # Delete
+```
+
+### API Keys
+```
+GET    /api/api-keys              # List all
+POST   /api/api-keys              # Generate new
+DELETE /api/api-keys/:id          # Revoke
+```
+
+### Tenant Settings
+```
+GET    /api/tenants/me            # Get current tenant
+PATCH  /api/tenants/me/spreadsheet # Update spreadsheet
+```
+
+## 🗂️ Using Google Sheets
+
+### Setup
+1. Create Google Cloud Project
+2. Enable Google Sheets API
+3. Create service account & download credentials.json
+4. Place credentials.json in project root
+5. Create Google Sheets with appropriate structure
+
+### Spreadsheet Structure
+See [DEPLOYMENT.md](./DEPLOYMENT.md#create-spreadsheet-structure) for detailed schema.
 
 ## 🔐 Security
 
-- ✓ JWT token authentication
-- ✓ Tenant isolation on every request
-- ✓ Permission-based access control
-- ✓ No Google credentials exposed to frontend
-- ✓ Secure error handling
-- ✓ Rate limiting ready
+- JWT tokens with 7-day expiry
+- API key validation per request
+- Tenant isolation at middleware level
+- Role-based access control
+- Input validation and sanitization
+- CORS configured for security
+- No sensitive data in logs
 
----
+## 💾 Database
 
-## 📊 Memory Usage
+**Supported:**
+- ✅ Google Sheets (recommended for SaaS)
+- ✅ In-memory (mock, for testing)
+- 🔄 Ready for: MongoDB, PostgreSQL, MySQL
 
-| Component | RAM |
-|-----------|-----|
-| Node.js Runtime | 30-40 MB |
-| Express + deps | 10-15 MB |
-| Cache | 5-10 MB |
-| Sessions | 1-3 MB |
-| **Total** | **50-80 MB** |
+Migration is easy thanks to repository pattern!
 
----
+## 🎨 Customization
 
-## 🔧 Configuration
-
-### Environment Variables
-
-```env
-PORT=3000
-NODE_ENV=production
-JWT_SECRET=your-secret-key
-
-# Optional - for Google Sheets
-GOOGLE_SERVICE_ACCOUNT_KEY=./credentials.json
-```
-
----
-
-## 📝 API Examples
-
-### Login
-```bash
-curl -X POST http://localhost:3050/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@test.com","password":"password"}'
-```
-
-Response:
-```json
-{
-  "token": "eyJhbGc...",
-  "user": {
-    "id": "user-1",
-    "email": "admin@test.com",
-    "role": "admin",
-    "tenantId": "tenant-1"
-  }
+### Branding
+Colors are defined in CSS variables:
+```css
+:root {
+  --primary: #5B9FFF;
+  --secondary: #001F5C;
+  --accent: #4A8FFF;
 }
 ```
 
-### Get Customers
-```bash
-curl http://localhost:3050/api/customers \
-  -H "Authorization: Bearer [TOKEN]"
-```
+Edit `public/index.html` CSS section to match your brand.
 
-### Create Customer
-```bash
-curl -X POST http://localhost:3050/api/customers \
-  -H "Authorization: Bearer [TOKEN]" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "first_name": "John",
-    "email": "john@example.com",
-    "phone": "123456789",
-    "company": "ACME Corp"
-  }'
-```
+### Adding New Roles
+Edit `src/middleware/tenant.js` for permission matrix.
 
----
+### Webhook Events
+Add new events in `src/routes/webhooks.js`.
 
-## 🐳 Docker Commands
+## 📊 Performance
 
-```bash
-# Start
-docker compose up -d
+- Lightweight: ~50-80MB RAM in Docker
+- Fast: Response times < 100ms for most queries
+- Scalable: Designed for multi-tenant SaaS
+- Efficient: Google Sheets caching layer
 
-# View logs
-docker compose logs -f app
+## 📝 License
 
-# Stop
-docker compose down
+Proprietary - Built for MIND AI
 
-# Restart
-docker compose restart
+## 🤝 Contributing
 
-# Rebuild
-docker compose up -d --build
-```
+This is a custom CRM built specifically for [Your Business]. For modifications or features, please contact the development team.
 
 ---
 
-## 🧪 Testing
+**Made with ❤️ for professional sales teams**
 
-### Health Check
-```bash
-curl http://localhost:3050/status
-```
-
-### Full Health Report
-```bash
-curl http://localhost:3050/health
-```
-
----
-
-## 📈 Scaling
-
-The system is designed to be lightweight. For more users:
-
-1. **Increase Caching**: Adjust TTL in config
-2. **Add Load Balancer**: Multiple containers behind nginx
-3. **Optimize Google Sheets**: Batch requests, reduce API calls
-4. **Migrate to Database**: Swap GoogleSheetsRepository with PostgresRepository
-
----
-
-## 🤝 Activepieces Integration
-
-API is ready for Activepieces webhooks and automation.
-
-Example: Create customer from Activepieces
-```
-POST /api/customers
-Headers: Authorization: Bearer [API_KEY]
-Body: { "first_name": "...", "email": "...", ... }
-```
-
----
-
-## 📞 Support
-
-Check logs:
-```bash
-docker compose logs app
-```
-
----
-
-## 📄 License
-
-MIT
-
----
-
-**Built with ❤️ for startups and small businesses**
+[🚀 Deployment Guide](./DEPLOYMENT.md) | [📚 API Docs](./API.md) | [⚙️ Configuration](./CONFIG.md)
