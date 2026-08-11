@@ -9,6 +9,9 @@ import customerRoutes from './routes/customers.js';
 import pipelineRoutes from './routes/pipelines.js';
 import taskRoutes from './routes/tasks.js';
 import noteRoutes from './routes/notes.js';
+import activityRoutes from './routes/activity.js';
+import webhookRoutes from './routes/webhooks.js';
+import apiKeyRoutes from './routes/api-keys.js';
 import { authMiddleware } from './middleware/auth.js';
 import { tenantMiddleware } from './middleware/tenant.js';
 import { errorHandler } from './middleware/errors.js';
@@ -50,6 +53,9 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/pipelines', pipelineRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
 
 // Catch-all for SPA
 app.get('*', (req, res) => {
