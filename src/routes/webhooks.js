@@ -112,4 +112,17 @@ export async function triggerWebhook(tenantId, event, payload) {
   }
 }
 
+// Used when a business is deleted entirely (see routes/tenants.js)
+export function deleteTenantWebhooks(tenantId) {
+  const idsToDelete = Array.from(webhooks.entries())
+    .filter(([, w]) => w.tenant_id === tenantId)
+    .map(([id]) => id);
+
+  idsToDelete.forEach(id => webhooks.delete(id));
+
+  Array.from(webhookLogs.entries())
+    .filter(([, l]) => idsToDelete.includes(l.webhook_id))
+    .forEach(([id]) => webhookLogs.delete(id));
+}
+
 export default router;

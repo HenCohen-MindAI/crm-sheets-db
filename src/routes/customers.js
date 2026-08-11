@@ -125,4 +125,11 @@ router.delete('/:id', requirePermission('customers.delete'), (req, res) => {
   res.json({ message: 'Customer deleted' });
 });
 
+// Used when a business is deleted entirely (see routes/tenants.js)
+export function deleteTenantCustomers(tenantId) {
+  Array.from(customers.entries())
+    .filter(([, c]) => c.tenant_id === tenantId)
+    .forEach(([id]) => customers.delete(id));
+}
+
 export default router;

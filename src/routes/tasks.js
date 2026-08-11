@@ -103,4 +103,11 @@ router.delete('/:id', requirePermission('tasks.delete'), (req, res) => {
   res.json({ message: 'משימה נמחקה' });
 });
 
+// Used when a business is deleted entirely (see routes/tenants.js)
+export function deleteTenantTasks(tenantId) {
+  Array.from(tasks.entries())
+    .filter(([, t]) => t.tenant_id === tenantId)
+    .forEach(([id]) => tasks.delete(id));
+}
+
 export default router;

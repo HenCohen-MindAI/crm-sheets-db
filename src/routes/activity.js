@@ -50,4 +50,11 @@ router.get('/customer/:customerId', requirePermission('activity.view'), (req, re
   });
 });
 
+// Used when a business is deleted entirely (see routes/tenants.js)
+export function deleteTenantActivities(tenantId) {
+  Array.from(activities.entries())
+    .filter(([, a]) => a.tenant_id === tenantId)
+    .forEach(([id]) => activities.delete(id));
+}
+
 export default router;

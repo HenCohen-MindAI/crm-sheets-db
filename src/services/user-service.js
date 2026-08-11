@@ -14,6 +14,10 @@ function seedDemoUser() {
     email: 'admin@test.com',
     password_hash: passwordHash,
     role: 'admin',
+    // Only this seeded account can manage/disable/delete/impersonate OTHER
+    // businesses. Every business admin created via POST /api/tenants is a
+    // normal tenant-scoped admin and never gets this flag.
+    is_platform_owner: true,
     active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -54,6 +58,7 @@ export function createUser(tenantId, { name, email, password, role }) {
     email,
     password_hash: bcrypt.hashSync(password, 10),
     role,
+    is_platform_owner: false,
     active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -61,6 +66,16 @@ export function createUser(tenantId, { name, email, password, role }) {
 
   users.set(user.id, user);
   return user;
+}
+
+export function findTenantAdmin(tenantId) {
+  return Array.from(users.values()).find(u => u.tenant_id === tenantId && u.role === 'admin' && u.active);
+}
+
+export function deleteTenantUsers(tenantId) {
+  Array.from(users.entries())
+    .filter(([, u]) => u.tenant_id === tenantId)
+    .forEach(([id]) => users.delete(id));
 }
 
 export function updateUser(id, tenantId, updates) {

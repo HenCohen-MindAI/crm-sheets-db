@@ -157,4 +157,14 @@ router.delete('/:id', requirePermission('pipelines.delete'), (req, res) => {
   res.json({ message: 'Pipeline נמחק' });
 });
 
+// Used when a business is deleted entirely (see routes/tenants.js)
+export function deleteTenantPipelines(tenantId) {
+  Array.from(stages.entries())
+    .filter(([, s]) => s.tenant_id === tenantId)
+    .forEach(([id]) => stages.delete(id));
+  Array.from(pipelines.entries())
+    .filter(([, p]) => p.tenant_id === tenantId)
+    .forEach(([id]) => pipelines.delete(id));
+}
+
 export default router;

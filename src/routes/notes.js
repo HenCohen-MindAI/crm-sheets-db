@@ -49,4 +49,11 @@ router.delete('/:id', requirePermission('notes.delete'), (req, res) => {
   res.json({ message: 'הערה נמחקה' });
 });
 
+// Used when a business is deleted entirely (see routes/tenants.js)
+export function deleteTenantNotes(tenantId) {
+  Array.from(notes.entries())
+    .filter(([, n]) => n.tenant_id === tenantId)
+    .forEach(([id]) => notes.delete(id));
+}
+
 export default router;

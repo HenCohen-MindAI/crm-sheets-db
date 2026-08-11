@@ -37,14 +37,16 @@ export function authMiddleware(req, res, next) {
   }
 }
 
-export function generateToken(userId, tenantId, role = 'user', permissions = []) {
+export function generateToken(userId, tenantId, role = 'user', permissions = [], extra = {}) {
   return jwt.sign(
     {
       userId,
       tenantId,
       role,
       permissions,
-      isApiKey: false
+      isApiKey: false,
+      isPlatformOwner: !!extra.isPlatformOwner,
+      impersonatedBy: extra.impersonatedBy || null
     },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }

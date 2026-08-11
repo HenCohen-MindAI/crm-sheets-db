@@ -11,10 +11,15 @@ export const ALL_PERMISSIONS = [
   'webhooks.view', 'webhooks.create', 'webhooks.delete',
   'api.view', 'api.manage',
   'users.view', 'users.manage',
-  'tenants.view', 'tenants.create',
   'settings.view', 'settings.edit',
   'google.manage'
 ];
+
+// Cross-tenant business management (create/list/disable/delete/impersonate
+// other businesses) is NOT part of the role/permission matrix on purpose -
+// it is gated separately by the isPlatformOwner flag (see requirePlatformOwner
+// in middleware/tenant.js), so a tenant's own admin can never manage other
+// tenants no matter what role they hold.
 
 export const ROLE_PERMISSIONS = {
   admin: [...ALL_PERMISSIONS],

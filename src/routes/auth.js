@@ -2,6 +2,7 @@ import express from 'express';
 import { generateToken } from '../middleware/auth.js';
 import { findUserByEmail, verifyPassword } from '../services/user-service.js';
 import { ROLE_PERMISSIONS } from '../services/permissions.js';
+import { getTenant } from '../services/tenant-service.js';
 
 const router = express.Router();
 
@@ -18,8 +19,15 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
+  const tenant = getTenant(user.tenant_id);
+  if (tenant && tenant.status !== 'active') {
+    return res.status(403).json({ error: 'העסק הושבת. פנה למנהל המערכת.' });
+  }
+
   const permissions = ROLE_PERMISSIONS[user.role] || [];
-  const token = generateToken(user.id, user.tenant_id, user.role, permissions);
+  const token = generateToken(user.id, user.tenant_id, user.role, permissions, {
+    isPlatformOwner: !!user.is_platform_owner
+  });
 
   res.json({
     token,
@@ -28,7 +36,8 @@ router.post('/login', (req, res) => {
       email: user.email,
       name: user.name,
       role: user.role,
-      tenantId: user.tenant_id
+      tenantId: user.tenant_id,
+      isPlatformOwner: !!user.is_platform_owner
     }
   });
 });

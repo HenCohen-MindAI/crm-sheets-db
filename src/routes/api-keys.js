@@ -76,4 +76,11 @@ export function verifyApiKey(key) {
   return apiKey;
 }
 
+// Used when a business is deleted entirely (see routes/tenants.js)
+export function deleteTenantApiKeys(tenantId) {
+  Array.from(apiKeys.entries())
+    .filter(([, k]) => k.tenant_id === tenantId)
+    .forEach(([id]) => apiKeys.delete(id));
+}
+
 export default router;

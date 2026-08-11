@@ -50,3 +50,16 @@ export function createTenant(name) {
   tenants.set(tenant.id, tenant);
   return tenant;
 }
+
+export function updateTenantStatus(tenantId, status) {
+  const tenant = getTenant(tenantId);
+  if (tenant) {
+    tenant.status = status;
+    tenant.updated_at = new Date().toISOString();
+  }
+  return tenant;
+}
+
+export function deleteTenant(tenantId) {
+  return tenants.delete(tenantId);
+}

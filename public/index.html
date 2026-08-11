@@ -85,6 +85,9 @@
         currentUser = data.user;
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(currentUser));
+        localStorage.removeItem('ownerToken');
+        localStorage.removeItem('ownerUser');
+        localStorage.removeItem('impersonating_name');
         currentView = 'dashboard';
         render();
       } catch (error) {
@@ -97,6 +100,9 @@
       currentUser = null;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('ownerToken');
+      localStorage.removeItem('ownerUser');
+      localStorage.removeItem('impersonating_name');
       currentView = 'login';
       render();
     }
@@ -216,6 +222,12 @@
           </div>
 
           <div class="flex-1 overflow-auto">
+            ${localStorage.getItem('ownerToken') ? `
+              <div class="bg-yellow-400 text-yellow-900 text-sm font-medium px-6 py-2 flex flex-wrap justify-between items-center gap-2">
+                <span>🔎 אתה צופה כרגע בעסק "${localStorage.getItem('impersonating_name') || ''}" - כל פעולה תבוצע על הנתונים של העסק הזה</span>
+                <button onclick="returnToOwnerAccount()" class="underline font-bold whitespace-nowrap">↩ חזרה לחשבון שלי</button>
+              </div>
+            ` : ''}
             <div class="bg-white shadow border-b border-gray-200">
               <div class="max-w-7xl mx-auto px-6 py-4">
                 <h2 class="text-2xl font-bold text-gray-800" id="pageTitle">לוח בקרה</h2>
@@ -899,26 +911,43 @@
               </ol>
             </div>
 
-            <div class="bg-white rounded-xl shadow p-6 mb-6">
-              <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🏢 ניהול עסקים</h3>
-              <p class="text-xs text-gray-600 mb-4">יצירת עסק חדש יוצרת גם משתמש מנהל נפרד עבורו. כדי לנהל את העסק החדש יש להתנתק ולהתחבר עם הפרטים שהוגדרו כאן.</p>
-              <form id="businessForm" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                <input type="text" id="bizName" placeholder="שם העסק" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="text" id="bizAdminName" placeholder="שם מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="email" id="bizAdminEmail" placeholder="אימייל מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="password" id="bizAdminPassword" placeholder="סיסמת מנהל (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 rounded-lg">
-                <button type="submit" class="md:col-span-2 text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ צור עסק חדש</button>
-              </form>
+            ${currentUser?.isPlatformOwner ? `
+              <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🏢 ניהול עסקים</h3>
+                <p class="text-xs text-gray-600 mb-4">כל עסק מבודד לחלוטין - ללא שיתוף נתונים בין עסקים. יצירת עסק חדש יוצרת עבורו משתמש מנהל נפרד. "כניסה לצפייה" מאפשרת לך לראות ולנהל את הנתונים של עסק מסוים בלי לדעת את הסיסמה שלו.</p>
+                <form id="businessForm" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  <input type="text" id="bizName" placeholder="שם העסק" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <input type="text" id="bizAdminName" placeholder="שם מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <input type="email" id="bizAdminEmail" placeholder="אימייל מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <input type="password" id="bizAdminPassword" placeholder="סיסמת מנהל (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <button type="submit" class="md:col-span-2 text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ צור עסק חדש</button>
+                </form>
 
-              ${businesses.length > 0 ? `
-                <div class="border-t pt-4">
-                  <h4 class="text-sm font-bold text-gray-600 mb-2">עסקים קיימים</h4>
-                  <ul class="space-y-1 text-sm">
-                    ${businesses.map(b => `<li class="flex justify-between border-b py-1"><span>${b.name}</span><span class="text-gray-500 text-xs">${new Date(b.created_at).toLocaleDateString('he-IL')}</span></li>`).join('')}
-                  </ul>
-                </div>
-              ` : ''}
-            </div>
+                ${businesses.length > 0 ? `
+                  <div class="border-t pt-4">
+                    <h4 class="text-sm font-bold text-gray-600 mb-3">עסקים קיימים</h4>
+                    <div class="space-y-2">
+                      ${businesses.map(b => `
+                        <div class="flex flex-wrap justify-between items-center border rounded-lg p-3 gap-2">
+                          <div>
+                            <span class="font-medium">${b.name}</span>
+                            <span class="mr-2 px-2 py-0.5 rounded text-xs font-medium ${b.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${b.status === 'active' ? 'פעיל' : 'מושבת'}</span>
+                            <span class="text-gray-500 text-xs">נוצר: ${new Date(b.created_at).toLocaleDateString('he-IL')}</span>
+                          </div>
+                          <div class="flex gap-3 text-sm">
+                            ${b.id === currentUser.tenantId ? '<span class="text-xs text-gray-400">העסק הראשי</span>' : `
+                              <button onclick="impersonateBusiness('${b.id}')" class="text-blue-600 hover:text-blue-800">👁️ כניסה לצפייה</button>
+                              <button onclick="toggleBusinessStatus('${b.id}', '${b.status}')" class="${b.status === 'active' ? 'text-orange-600 hover:text-orange-800' : 'text-green-600 hover:text-green-800'}">${b.status === 'active' ? '🔒 השבת' : '🔓 הפעל'}</button>
+                              <button onclick="deleteBusiness('${b.id}', '${b.name}')" class="text-red-600 hover:text-red-800">🗑️ מחק</button>
+                            `}
+                          </div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
           </div>
         `;
 
@@ -1043,6 +1072,72 @@
       } catch (error) {
         alert('❌ ' + error.message);
       }
+    };
+
+    window.toggleBusinessStatus = async function(id, currentStatus) {
+      const nextStatus = currentStatus === 'active' ? 'disabled' : 'active';
+      const confirmMsg = nextStatus === 'disabled'
+        ? 'להשבית את העסק? המשתמשים שלו לא יוכלו להתחבר או להשתמש במערכת.'
+        : 'להפעיל מחדש את העסק?';
+      if (!confirm(confirmMsg)) return;
+      try {
+        await apiCall(`/tenants/${id}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: nextStatus })
+        });
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.deleteBusiness = async function(id, name) {
+      if (!confirm(`למחוק לצמיתות את העסק "${name}" וכל הנתונים שלו (לקוחות, משימות, עובדים וכו')? פעולה זו בלתי הפיכה.`)) return;
+      try {
+        await apiCall(`/tenants/${id}`, { method: 'DELETE' });
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.impersonateBusiness = async function(id) {
+      try {
+        const result = await apiCall(`/tenants/${id}/impersonate`, { method: 'POST' });
+
+        localStorage.setItem('ownerToken', token);
+        localStorage.setItem('ownerUser', JSON.stringify(currentUser));
+        localStorage.setItem('impersonating_name', result.tenant.name);
+
+        token = result.token;
+        currentUser = result.user;
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(currentUser));
+
+        currentView = 'dashboard';
+        render();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.returnToOwnerAccount = async function() {
+      const ownerToken = localStorage.getItem('ownerToken');
+      const ownerUser = localStorage.getItem('ownerUser');
+      if (!ownerToken) return;
+
+      token = ownerToken;
+      currentUser = JSON.parse(ownerUser);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', ownerUser);
+      localStorage.removeItem('ownerToken');
+      localStorage.removeItem('ownerUser');
+      localStorage.removeItem('impersonating_name');
+
+      currentView = 'settings';
+      render();
     };
 
     window.deleteCustomer = async function(id) {
