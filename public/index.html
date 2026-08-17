@@ -10,21 +10,22 @@
   </script>
   <style>
     :root {
-      /* canvas + surfaces */
-      --bg: #F4F4F5;
+      /* canvas + surfaces - pale mint-tinted neutrals, per the Flup reference */
+      --bg: #F5FAF7;
       --card: #FFFFFF;
-      --sidebar-bg: #FAFAFA;
-      --sidebar-border: #E4E4E7;
+      --sidebar-bg: #F6FBF8;
+      --sidebar-border: #E1EFE7;
       --hairline: #E1E0D9;
       /* text */
-      --ink: #18181B;
-      --secondary: #18181B; /* alias of --ink, kept for heading usages */
-      --muted: #71717A;
+      --ink: #0B2E22;
+      --secondary: #0B2E22; /* alias of --ink, kept for heading usages */
+      --muted: #6B8478;
       /* buttons / accents - must stay contrastable with white text in both themes */
-      --primary: #18181B;
-      --accent: #3F3F46;
-      --brand: #4F46E5;
-      --light: #EEEEF1;
+      --primary: #15803D;
+      --accent: #16A34A;
+      --brand: #047857;
+      --light: #E3F5EA;
+      --active-tint: #E3F5EA;
       /* status */
       --mint: #0CA30C;
       --mint-soft: #D1FAE5;
@@ -36,18 +37,19 @@
     }
 
     html.dark {
-      --bg: #0D0D0D;
-      --card: #18181B;
-      --sidebar-bg: #131316;
-      --sidebar-border: #27272A;
-      --hairline: #2C2C2A;
-      --ink: #FAFAFA;
-      --secondary: #FAFAFA;
-      --muted: #A1A1AA;
-      --primary: #4F46E5;
-      --accent: #6366F1;
-      --brand: #818CF8;
-      --light: #26262A;
+      --bg: #0B1210;
+      --card: #12211B;
+      --sidebar-bg: #0E1815;
+      --sidebar-border: #1E2E27;
+      --hairline: #1E2E27;
+      --ink: #F2FBF6;
+      --secondary: #F2FBF6;
+      --muted: #7FA592;
+      --primary: #16A34A;
+      --accent: #22C55E;
+      --brand: #34D399;
+      --light: #16362A;
+      --active-tint: rgba(34,197,94,0.14);
       --mint: #0CA30C;
       --mint-soft: rgba(12,163,12,0.18);
       --rose: #E66767;
@@ -64,10 +66,9 @@
     .logo-svg { width: 40px; height: 40px; }
     .sidebar-header { border-bottom: 1px solid var(--sidebar-border); }
     .sidebar-item.active {
-      background-color: var(--card);
-      color: var(--ink);
+      background-color: var(--active-tint);
+      color: var(--brand);
       font-weight: 700;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     .sidebar-item {
       transition: all 0.15s ease;
@@ -249,7 +250,7 @@
 
     function renderLogin() {
       return `
-        <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #18181B 0%, #3F3F46 100%);">
+        <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #0B2E22 0%, #15803D 100%);">
           <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
             <div class="text-center mb-8">
               <svg viewBox="0 0 160 60" class="logo-svg mx-auto mb-4" style="width: 160px; height: 60px;">
@@ -272,7 +273,7 @@
             <form id="loginForm" class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">דוא״ל</label>
-                <input type="email" id="email" value="admin@test.com" placeholder="admin@test.com" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" style="focus-ring-color: var(--primary);">
+                <input type="email" id="email" value="admin@test.com" placeholder="admin@test.com" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600">
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">סיסמה</label>
@@ -385,16 +386,14 @@
         const completionPct = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : null;
 
         const statCard = ({ label, value, icon, pill, delay }) => `
-          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 hover-lift anim-card" style="animation-delay:${delay}ms;">
-            <div class="flex items-center justify-between mb-5">
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-5 hover-lift anim-card" style="animation-delay:${delay}ms;">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-sm">${icon}</span>
               <p class="text-sm" style="color: var(--muted);">${label}</p>
-              <div class="rounded-full flex items-center justify-center flex-shrink-0" style="width: 40px; height: 40px; background: var(--light);">
-                <span class="text-lg">${icon}</span>
-              </div>
             </div>
-            <div class="flex items-end gap-3 flex-wrap">
-              <p class="text-4xl font-extrabold count-up" data-target="${typeof value === 'number' ? value : ''}" style="color: var(--ink);">${typeof value === 'number' ? 0 : value}</p>
-              ${pill ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background: var(--mint-soft); color: var(--mint);">${pill}</span>` : ''}
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-3xl font-extrabold count-up" data-target="${typeof value === 'number' ? value : ''}" style="color: var(--ink);">${typeof value === 'number' ? 0 : value}</p>
+              ${pill ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5" style="background: var(--mint-soft); color: var(--mint);">↗ ${pill}</span>` : ''}
             </div>
           </div>
         `;
@@ -450,22 +449,36 @@
         ].map(s => ({ ...s, count: tasks.filter(t => t.status === s.key).length }));
         const totalStatusTasks = statusDefs.reduce((s, d) => s + d.count, 0);
 
+        // Build a donut ring via conic-gradient - matches the Flup reference's category
+        // donut. Still follows dataviz rules: validated categorical colors, a legend with
+        // direct-labeled counts (never color-alone), and a hover tooltip per slice.
+        let cursor = 0;
+        const donutStops = statusDefs.filter(s => s.count > 0).map(s => {
+          const from = cursor;
+          const pct = (s.count / totalStatusTasks) * 100;
+          cursor += pct;
+          return `${s.color} ${from}% ${cursor}%`;
+        }).join(', ');
+
         const statusChart = `
           <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 hover-lift anim-card" style="animation-delay:220ms;">
             <h3 class="text-lg font-bold mb-1" style="color: var(--secondary);">משימות לפי סטטוס</h3>
             <p class="text-xs mb-6" style="color: var(--muted);">התפלגות ${totalStatusTasks} המשימות הפתוחות במערכת</p>
             ${totalStatusTasks === 0 ? `
-              <div class="flex items-center justify-center text-sm" style="height: 100px; color: var(--muted);">אין עדיין משימות</div>
+              <div class="flex items-center justify-center text-sm" style="height: 160px; color: var(--muted);">אין עדיין משימות</div>
             ` : `
-              <div class="flex w-full rounded-full overflow-hidden gap-0.5" style="height: 14px;">
-                ${statusDefs.filter(s => s.count > 0).map((s, i) => `
-                  <div class="hover:brightness-110 transition-all" title="${s.label}: ${s.count}" style="flex: ${s.count} 0 0%; background: ${s.color}; animation: drawBar 0.6s ease both; animation-delay: ${300 + i * 60}ms;"></div>
-                `).join('')}
+              <div class="flex items-center justify-center mb-5" style="height: 160px;">
+                <div class="relative rounded-full anim-card" style="width: 150px; height: 150px; background: conic-gradient(${donutStops}); animation-delay:350ms;">
+                  <div class="absolute rounded-full flex flex-col items-center justify-center" style="inset: 22px; background: var(--card);">
+                    <span class="text-2xl font-extrabold" style="color: var(--ink);">${totalStatusTasks}</span>
+                    <span class="text-xs" style="color: var(--muted);">סה״כ</span>
+                  </div>
+                </div>
               </div>
-              <div class="grid grid-cols-2 gap-3 mt-5">
+              <div class="grid grid-cols-2 gap-3">
                 ${statusDefs.map(s => `
-                  <div class="flex items-center gap-2 text-sm">
-                    <span class="rounded-full flex-shrink-0" style="width: 8px; height: 8px; background: ${s.color};"></span>
+                  <div class="flex items-center gap-2 text-sm" title="${s.label}: ${s.count}">
+                    <span class="rounded-sm flex-shrink-0" style="width: 8px; height: 8px; background: ${s.color};"></span>
                     <span style="color: var(--muted);">${s.label}</span>
                     <span class="font-bold mr-auto" style="color: var(--ink);">${s.count}</span>
                   </div>
@@ -476,11 +489,15 @@
         `;
 
         content.innerHTML = `
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-5 mb-6">
             ${statCard({ label: 'לקוחות פעילים', value: activeCustomers, icon: '👥', delay: 0 })}
             ${statCard({ label: 'לקוחות חדשים החודש', value: monthCustomers, icon: '📈', delay: 40 })}
             ${statCard({ label: 'משימות כללי', value: taskCount, icon: '✓', delay: 80 })}
             ${statCard({ label: 'משימות שהושלמו', value: `${completedTasks}/${taskCount}`, icon: '✅', pill: completionPct !== null ? `${completionPct}%` : null, delay: 120 })}
+            <button onclick="switchView('customers')" class="rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1 p-5 hover-lift anim-card transition-colors" style="animation-delay:160ms; border-color: var(--sidebar-border); color: var(--muted);" onmouseover="this.style.borderColor='var(--primary)'; this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--sidebar-border)'; this.style.color='var(--muted)'">
+              <span class="text-xl">＋</span>
+              <span class="text-sm font-medium">הוסף לקוח</span>
+            </button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
@@ -655,7 +672,7 @@
           ${pipelines.length === 0 ? `
             <div class="bg-blue-50 border border-blue-200 dark:border-indigo-900 rounded-xl p-8 text-center">
               <p class="text-gray-600 dark:text-zinc-400 mb-4">אין עדיין Pipelines</p>
-              <button onclick="document.getElementById('pipelineName').focus()" class="text-blue-600 hover:text-blue-800 font-medium">צור ראשון עכשיו →</button>
+              <button onclick="document.getElementById('pipelineName').focus()" class="text-green-700 dark:text-emerald-400 hover:text-green-900 dark:hover:text-emerald-300 font-medium">צור ראשון עכשיו →</button>
             </div>
           ` : ''}
 
@@ -851,7 +868,7 @@
                         </select>
                       </div>
                       <div class="flex gap-2 mt-2 flex-wrap">
-                        ${t.status === 'open' ? `<button onclick="updateTaskStatus('${t.id}', 'in_progress')" class="text-xs text-blue-600 hover:text-blue-800">→ בהביצוע</button>` : ''}
+                        ${t.status === 'open' ? `<button onclick="updateTaskStatus('${t.id}', 'in_progress')" class="text-xs text-green-700 dark:text-emerald-400 hover:text-green-900 dark:hover:text-emerald-300">→ בהביצוע</button>` : ''}
                         ${t.status === 'in_progress' ? `<button onclick="updateTaskStatus('${t.id}', 'completed')" class="text-xs text-green-600 hover:text-green-800">✓ הושלם</button>` : ''}
                         <button onclick="deleteTask('${t.id}')" class="text-xs text-red-600 hover:text-red-800">🗑️ מחק</button>
                       </div>
@@ -945,7 +962,7 @@
                 </div>
                 <div class="flex justify-between items-center">
                   <p class="text-xs text-gray-500 dark:text-zinc-500">נוצר: ${new Date(w.created_at).toLocaleDateString('he-IL')}</p>
-                  <button onclick="viewWebhookLogs('${w.id}')" class="text-xs text-blue-600 hover:text-blue-800">📋 היסטוריית שליחות</button>
+                  <button onclick="viewWebhookLogs('${w.id}')" class="text-xs text-green-700 dark:text-emerald-400 hover:text-green-900 dark:hover:text-emerald-300">📋 היסטוריית שליחות</button>
                 </div>
               </div>
             `).join('')}
@@ -1011,7 +1028,7 @@
                     <td class="px-6 py-4 text-sm font-mono">${k.key_preview}</td>
                     <td class="px-6 py-4 text-sm">${new Date(k.created_at).toLocaleDateString('he-IL')}</td>
                     <td class="px-6 py-4 text-sm space-x-3 space-x-reverse">
-                      <button onclick="revealApiKey('${k.id}')" class="text-blue-600 hover:text-blue-800">👁️ הצג</button>
+                      <button onclick="revealApiKey('${k.id}')" class="text-green-700 dark:text-emerald-400 hover:text-green-900 dark:hover:text-emerald-300">👁️ הצג</button>
                       <button onclick="revokeApiKey('${k.id}')" class="text-red-600 hover:text-red-800">בטל</button>
                     </td>
                   </tr>
@@ -1076,7 +1093,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
                 ${activeKeyNames
                   ? `יש לך כרגע מפתחות פעילים בשם: <b>${activeKeyNames}</b>.`
                   : 'עדיין אין לך API Key פעיל.'}
-                עברו לעמוד <button onclick="switchView('api-keys')" class="text-blue-600 underline">🔑 API Keys</button> כדי ליצור מפתח חדש, או ללחוץ "👁️ הצג" ליד מפתח קיים כדי לקבל שוב את הערך המלא שלו בכל רגע.
+                עברו לעמוד <button onclick="switchView('api-keys')" class="text-green-700 dark:text-emerald-400 underline">🔑 API Keys</button> כדי ליצור מפתח חדש, או ללחוץ "👁️ הצג" ליד מפתח קיים כדי לקבל שוב את הערך המלא שלו בכל רגע.
               </p>
             </div>
 
@@ -1159,7 +1176,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
 
             <div class="bg-purple-50 dark:bg-purple-950/40 rounded-2xl shadow-sm p-6 border border-purple-200 dark:border-purple-900">
               <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">📤 כיוון הפוך: CRM שולח אירועים ל-n8n (Webhooks)</h3>
-              <p class="text-sm text-gray-700 dark:text-zinc-300 mb-3">כדי שה-CRM יפעיל workflow ב-n8n אוטומטית (למשל בכל פעם שנוצר ליד), הקימו ב-n8n node מסוג <b>Webhook</b> (Trigger), העתיקו את ה-Production URL שלו, ורשמו אותו בעמוד <button onclick="switchView('webhooks')" class="text-blue-600 underline">🔗 Webhooks</button> של ה-CRM.</p>
+              <p class="text-sm text-gray-700 dark:text-zinc-300 mb-3">כדי שה-CRM יפעיל workflow ב-n8n אוטומטית (למשל בכל פעם שנוצר ליד), הקימו ב-n8n node מסוג <b>Webhook</b> (Trigger), העתיקו את ה-Production URL שלו, ורשמו אותו בעמוד <button onclick="switchView('webhooks')" class="text-green-700 dark:text-emerald-400 underline">🔗 Webhooks</button> של ה-CRM.</p>
               <p class="text-xs text-gray-600 dark:text-zinc-400 mb-2">אירועים זמינים: <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.created</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.updated</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.stage_changed</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.deleted</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">task.created</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">task.completed</code>.</p>
               <p class="text-xs text-gray-600 dark:text-zinc-400 mb-2">גוף הבקשה שיישלח ל-n8n (POST, JSON):</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">{
@@ -1203,7 +1220,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               <tbody>
                 ${employees.map(u => `
                   <tr class="border-b hover:bg-gray-50 dark:hover:bg-zinc-800">
-                    <td class="px-6 py-4 font-medium">${u.name} ${currentUser && u.id === currentUser.id ? '<span class="text-xs text-blue-600">(אתה)</span>' : ''}</td>
+                    <td class="px-6 py-4 font-medium">${u.name} ${currentUser && u.id === currentUser.id ? '<span class="text-xs text-green-700 dark:text-emerald-400">(אתה)</span>' : ''}</td>
                     <td class="px-6 py-4 text-sm">${u.email}</td>
                     <td class="px-6 py-4 text-sm">
                       <select onchange="updateUserRole('${u.id}', this.value)" class="px-2 py-1 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded text-sm" ${currentUser && u.id === currentUser.id ? 'disabled' : ''}>
@@ -1292,7 +1309,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
                           </div>
                           <div class="flex gap-3 text-sm">
                             ${b.id === currentUser.tenantId ? '<span class="text-xs text-gray-400">העסק הראשי</span>' : `
-                              <button onclick="impersonateBusiness('${b.id}')" class="text-blue-600 hover:text-blue-800">👁️ כניסה לצפייה</button>
+                              <button onclick="impersonateBusiness('${b.id}')" class="text-green-700 dark:text-emerald-400 hover:text-green-900 dark:hover:text-emerald-300">👁️ כניסה לצפייה</button>
                               <button onclick="toggleBusinessStatus('${b.id}', '${b.status}')" class="${b.status === 'active' ? 'text-orange-600 hover:text-orange-800' : 'text-green-600 hover:text-green-800'}">${b.status === 'active' ? '🔒 השבת' : '🔓 הפעל'}</button>
                               <button onclick="deleteBusiness('${b.id}', '${b.name}')" class="text-red-600 hover:text-red-800">🗑️ מחק</button>
                             `}
