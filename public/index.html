@@ -5,30 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CRM Pro - System</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
   <style>
     :root {
+      /* canvas + surfaces */
       --bg: #F4F4F5;
+      --card: #FFFFFF;
+      --sidebar-bg: #FAFAFA;
+      --sidebar-border: #E4E4E7;
+      --hairline: #E1E0D9;
+      /* text */
       --ink: #18181B;
+      --secondary: #18181B; /* alias of --ink, kept for heading usages */
       --muted: #71717A;
+      /* buttons / accents - must stay contrastable with white text in both themes */
       --primary: #18181B;
-      --secondary: #18181B;
       --accent: #3F3F46;
       --brand: #4F46E5;
       --light: #EEEEF1;
-      --mint: #10B981;
+      /* status */
+      --mint: #0CA30C;
       --mint-soft: #D1FAE5;
-      --rose: #E11D48;
+      --rose: #D03B3B;
       --rose-soft: #FFE4E6;
+      /* chart chrome (see dataviz palette) */
+      --chart-surface: #FCFCFB;
+      --chart-grid: #E1E0D9;
+    }
+
+    html.dark {
+      --bg: #0D0D0D;
+      --card: #18181B;
+      --sidebar-bg: #131316;
+      --sidebar-border: #27272A;
+      --hairline: #2C2C2A;
+      --ink: #FAFAFA;
+      --secondary: #FAFAFA;
+      --muted: #A1A1AA;
+      --primary: #4F46E5;
+      --accent: #6366F1;
+      --brand: #818CF8;
+      --light: #26262A;
+      --mint: #0CA30C;
+      --mint-soft: rgba(12,163,12,0.18);
+      --rose: #E66767;
+      --rose-soft: rgba(230,103,103,0.18);
+      --chart-surface: #1A1A19;
+      --chart-grid: #2C2C2A;
+      color-scheme: dark;
     }
 
     * { direction: rtl; text-align: right; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); transition: background-color 0.2s ease; }
     input, textarea, select { direction: ltr; text-align: left; }
 
     .logo-svg { width: 40px; height: 40px; }
-    .sidebar-header { border-bottom: 1px solid #E4E4E7; }
+    .sidebar-header { border-bottom: 1px solid var(--sidebar-border); }
     .sidebar-item.active {
-      background-color: #fff;
+      background-color: var(--card);
       color: var(--ink);
       font-weight: 700;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -38,7 +74,7 @@
       color: var(--muted);
     }
     .sidebar-item:hover:not(.active) {
-      background-color: rgba(0, 0, 0, 0.04);
+      background-color: rgba(127, 127, 127, 0.12);
       color: var(--ink);
     }
     .sidebar-group-label {
@@ -48,11 +84,23 @@
     .sidebar-group-label:hover { color: var(--ink); }
     .sidebar-group-label.has-active { color: var(--ink); font-weight: 700; }
     .sidebar-thread {
-      border-right: 1px solid #E4E4E7;
+      border-right: 1px solid var(--sidebar-border);
     }
     .btn-primary { background-color: var(--primary); }
     .btn-primary:hover { background-color: var(--accent); }
-    .header-gradient { background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%); }
+
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes navReveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    @keyframes drawBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .anim-card { animation: fadeInUp 0.35s ease both; }
+    .anim-fade { animation: fadeIn 0.25s ease both; }
+    .nav-reveal { animation: navReveal 0.18s ease both; }
+    .hover-lift { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    html.dark .hover-lift:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+    .theme-toggle-track { transition: background-color 0.2s ease; }
+    .theme-toggle-thumb { transition: transform 0.2s ease; }
   </style>
 </head>
 <body style="background: var(--bg);">
@@ -63,6 +111,21 @@
     const ROLE_LABELS = { admin: 'מנהל מערכת', manager: 'מנהל צוות', sales_rep: 'איש מכירות', viewer: 'צפייה בלבד' };
     let token = localStorage.getItem('token');
     let currentView = token ? 'dashboard' : 'login';
+
+    // Theme: explicit choice persists in localStorage; otherwise follow the OS setting.
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    }
+    function currentTheme() {
+      return localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    }
+    applyTheme(currentTheme());
+    window.toggleTheme = function() {
+      const next = currentTheme() === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      applyTheme(next);
+      render();
+    };
 
     // Sidebar nav: flat items alongside collapsible groups, mirroring the
     // tree-style grouped nav (parent + indented children with a connector
@@ -186,7 +249,7 @@
 
     function renderLogin() {
       return `
-        <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);">
+        <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(135deg, #18181B 0%, #3F3F46 100%);">
           <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
             <div class="text-center mb-8">
               <svg viewBox="0 0 160 60" class="logo-svg mx-auto mb-4" style="width: 160px; height: 60px;">
@@ -203,22 +266,22 @@
                 <text x="85" y="35" font-size="24" font-weight="bold" fill="#001F5C" font-family="Arial">AI</text>
               </svg>
               <h1 class="text-3xl font-bold" style="color: var(--secondary);">MIND AI</h1>
-              <p class="text-gray-600 text-sm mt-2">CRM מקצועי לניהול לקוחות ועסקים</p>
+              <p class="text-gray-600 dark:text-zinc-400 text-sm mt-2">CRM מקצועי לניהול לקוחות ועסקים</p>
             </div>
 
             <form id="loginForm" class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">דוא״ל</label>
-                <input type="email" id="email" value="admin@test.com" placeholder="admin@test.com" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" style="focus-ring-color: var(--primary);">
+                <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">דוא״ל</label>
+                <input type="email" id="email" value="admin@test.com" placeholder="admin@test.com" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" style="focus-ring-color: var(--primary);">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">סיסמה</label>
-                <input type="password" id="password" value="password" placeholder="סיסמה" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2" style="focus-ring-color: var(--primary);">
+                <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">סיסמה</label>
+                <input type="password" id="password" value="password" placeholder="סיסמה" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg focus:outline-none focus:ring-2" style="focus-ring-color: var(--primary);">
               </div>
               <button type="submit" class="w-full text-white font-bold py-3 rounded-lg hover:shadow-lg transition" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">התחבר</button>
             </form>
 
-            <div class="text-center text-xs text-gray-500 mt-6">
+            <div class="text-center text-xs text-gray-500 dark:text-zinc-500 mt-6">
               <p>Demo: admin@test.com / password</p>
             </div>
           </div>
@@ -231,15 +294,15 @@
 
       return `
         <div class="flex h-screen" style="background: var(--bg);">
-          <div class="w-64 flex flex-col h-screen border-l" style="background: #FAFAFA; border-color: #E4E4E7;">
+          <div class="w-64 flex flex-col h-screen border-l" style="background: var(--sidebar-bg); border-color: var(--sidebar-border);">
             <div class="p-6 sidebar-header">
               <div class="flex items-center gap-3 justify-end">
                 <h1 class="text-base font-bold" style="color: var(--ink);">MIND AI CRM</h1>
-                <div class="rounded-full flex items-center justify-center flex-shrink-0" style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--ink) 0%, var(--accent) 100%);">
+                <div class="rounded-full flex items-center justify-center flex-shrink-0" style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">
                   <svg viewBox="0 0 40 40" class="logo-svg" style="width: 20px; height: 20px;">
                     <path d="M12,18 Q10,12 8,12 Q4,12 4,18 Q4,22 8,24 L12,24 Z" fill="#fff" stroke="white" stroke-width="0.5"/>
-                    <circle cx="6" cy="16" r="1" fill="var(--ink)"/>
-                    <circle cx="7" cy="20" r="1" fill="var(--ink)"/>
+                    <circle cx="6" cy="16" r="1" fill="var(--primary)"/>
+                    <circle cx="7" cy="20" r="1" fill="var(--primary)"/>
                   </svg>
                 </div>
               </div>
@@ -278,14 +341,22 @@
                 `;
               }).join('')}
             </nav>
-            <div class="p-4 flex-shrink-0" style="border-top: 1px solid #E4E4E7;">
+            <div class="p-4 flex-shrink-0 space-y-2" style="border-top: 1px solid var(--sidebar-border);">
+              <button onclick="toggleTheme()" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm" style="color: var(--muted);">
+                <span class="theme-toggle-track flex items-center rounded-full p-0.5" style="width: 40px; height: 22px; background: ${currentTheme() === 'dark' ? 'var(--primary)' : '#D4D4D8'};">
+                  <span class="theme-toggle-thumb rounded-full bg-white flex items-center justify-center" style="width: 18px; height: 18px; transform: translateX(${currentTheme() === 'dark' ? '-18px' : '0'});">
+                    <span style="font-size: 10px;">${currentTheme() === 'dark' ? '🌙' : '☀️'}</span>
+                  </span>
+                </span>
+                <span>${currentTheme() === 'dark' ? 'מצב כהה' : 'מצב בהיר'}</span>
+              </button>
               <button onclick="logout()" class="w-full text-sm font-medium py-2.5 rounded-xl transition" style="background: var(--rose-soft); color: var(--rose);" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">התנתקות</button>
             </div>
           </div>
 
           <div class="flex-1 overflow-auto">
             ${localStorage.getItem('ownerToken') ? `
-              <div class="bg-yellow-400 text-yellow-900 text-sm font-medium px-6 py-2 flex flex-wrap justify-between items-center gap-2">
+              <div class="bg-yellow-400 dark:bg-yellow-600 text-yellow-900 dark:text-yellow-50 text-sm font-medium px-6 py-2 flex flex-wrap justify-between items-center gap-2">
                 <span>🔎 אתה צופה כרגע בעסק "${localStorage.getItem('impersonating_name') || ''}" - כל פעולה תבוצע על הנתונים של העסק הזה</span>
                 <button onclick="returnToOwnerAccount()" class="underline font-bold whitespace-nowrap">↩ חזרה לחשבון שלי</button>
               </div>
@@ -304,6 +375,7 @@
 
       if (currentView === 'dashboard') {
         document.getElementById('pageTitle').textContent = '📊 לוח בקרה';
+        const isDark = currentTheme() === 'dark';
         const activeCustomers = customers.filter(c => c.status === 'active').length;
         const thisMonth = new Date().getMonth();
         const monthCustomers = customers.filter(c => new Date(c.created_at).getMonth() === thisMonth).length;
@@ -312,8 +384,8 @@
 
         const completionPct = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : null;
 
-        const statCard = ({ label, value, icon, pill }) => `
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        const statCard = ({ label, value, icon, pill, delay }) => `
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 hover-lift anim-card" style="animation-delay:${delay}ms;">
             <div class="flex items-center justify-between mb-5">
               <p class="text-sm" style="color: var(--muted);">${label}</p>
               <div class="rounded-full flex items-center justify-center flex-shrink-0" style="width: 40px; height: 40px; background: var(--light);">
@@ -321,29 +393,111 @@
               </div>
             </div>
             <div class="flex items-end gap-3 flex-wrap">
-              <p class="text-4xl font-extrabold" style="color: var(--ink);">${value}</p>
+              <p class="text-4xl font-extrabold count-up" data-target="${typeof value === 'number' ? value : ''}" style="color: var(--ink);">${typeof value === 'number' ? 0 : value}</p>
               ${pill ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background: var(--mint-soft); color: var(--mint);">${pill}</span>` : ''}
             </div>
           </div>
         `;
 
+        // --- Weekly activity trend: magnitude over time -> single-series bar chart (dataviz: sequential/1-hue) ---
+        const barColor = isDark ? '#3987e5' : '#2a78d6'; // categorical slot 1 (blue) per validated palette
+        const days = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          return d;
+        });
+        const dayCounts = days.map(d => {
+          const key = d.toISOString().slice(0, 10);
+          return activities.filter(a => (a.created_at || '').slice(0, 10) === key).length;
+        });
+        const maxCount = Math.max(1, ...dayCounts);
+        const totalWeekEvents = dayCounts.reduce((s, n) => s + n, 0);
+
+        const trendChart = `
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 hover-lift anim-card lg:col-span-2" style="animation-delay:150ms;">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-lg font-bold" style="color: var(--secondary);">פעילות ב-7 הימים האחרונים</h3>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background: var(--light); color: var(--muted);">${totalWeekEvents} אירועים</span>
+            </div>
+            <p class="text-xs mb-6" style="color: var(--muted);">סך כל האירועים שנרשמו במערכת, לפי יום</p>
+            ${totalWeekEvents === 0 ? `
+              <div class="flex items-center justify-center text-sm" style="height: 160px; color: var(--muted);">אין עדיין נתוני פעילות</div>
+            ` : `
+              <div class="flex items-end justify-between gap-2" style="height: 170px;">
+                ${dayCounts.map((count, i) => {
+                  const barH = Math.max(Math.round((count / maxCount) * 130), count > 0 ? 6 : 2);
+                  return `
+                    <div class="flex-1 flex flex-col items-center gap-2 group">
+                      <div class="relative flex items-end justify-center w-full" style="height: 140px;">
+                        <div class="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded-lg whitespace-nowrap pointer-events-none" style="background: var(--ink); color: var(--bg);">${count}</div>
+                        <div class="w-full max-w-[28px] rounded-t-md transition-all group-hover:brightness-110" style="height: ${barH}px; background: ${count > 0 ? barColor : (isDark ? '#27272A' : '#E4E4E7')}; transform-origin: bottom; animation: fadeInUp 0.5s ease both; animation-delay: ${250 + i * 40}ms;"></div>
+                      </div>
+                      <span class="text-xs" style="color: var(--muted);">${days[i].toLocaleDateString('he-IL', { weekday: 'short' })}</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        `;
+
+        // --- Task status breakdown: part-to-whole -> single stacked bar (dataviz: categorical, direct labels) ---
+        const statusDefs = [
+          { key: 'open', label: 'פתוח', color: isDark ? '#3987e5' : '#2a78d6' },
+          { key: 'in_progress', label: 'בהביצוע', color: isDark ? '#d95926' : '#eb6834' },
+          { key: 'completed', label: 'הושלמו', color: isDark ? '#199e70' : '#1baf7a' },
+          { key: 'cancelled', label: 'בוטלו', color: isDark ? '#c98500' : '#eda100' }
+        ].map(s => ({ ...s, count: tasks.filter(t => t.status === s.key).length }));
+        const totalStatusTasks = statusDefs.reduce((s, d) => s + d.count, 0);
+
+        const statusChart = `
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 hover-lift anim-card" style="animation-delay:220ms;">
+            <h3 class="text-lg font-bold mb-1" style="color: var(--secondary);">משימות לפי סטטוס</h3>
+            <p class="text-xs mb-6" style="color: var(--muted);">התפלגות ${totalStatusTasks} המשימות הפתוחות במערכת</p>
+            ${totalStatusTasks === 0 ? `
+              <div class="flex items-center justify-center text-sm" style="height: 100px; color: var(--muted);">אין עדיין משימות</div>
+            ` : `
+              <div class="flex w-full rounded-full overflow-hidden gap-0.5" style="height: 14px;">
+                ${statusDefs.filter(s => s.count > 0).map((s, i) => `
+                  <div class="hover:brightness-110 transition-all" title="${s.label}: ${s.count}" style="flex: ${s.count} 0 0%; background: ${s.color}; animation: drawBar 0.6s ease both; animation-delay: ${300 + i * 60}ms;"></div>
+                `).join('')}
+              </div>
+              <div class="grid grid-cols-2 gap-3 mt-5">
+                ${statusDefs.map(s => `
+                  <div class="flex items-center gap-2 text-sm">
+                    <span class="rounded-full flex-shrink-0" style="width: 8px; height: 8px; background: ${s.color};"></span>
+                    <span style="color: var(--muted);">${s.label}</span>
+                    <span class="font-bold mr-auto" style="color: var(--ink);">${s.count}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        `;
+
         content.innerHTML = `
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-            ${statCard({ label: 'לקוחות פעילים', value: activeCustomers, icon: '👥' })}
-            ${statCard({ label: 'לקוחות חדשים החודש', value: monthCustomers, icon: '📈' })}
-            ${statCard({ label: 'משימות כללי', value: taskCount, icon: '✓' })}
-            ${statCard({ label: 'משימות שהושלמו', value: `${completedTasks}/${taskCount}`, icon: '✅', pill: completionPct !== null ? `${completionPct}%` : null })}
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+            ${statCard({ label: 'לקוחות פעילים', value: activeCustomers, icon: '👥', delay: 0 })}
+            ${statCard({ label: 'לקוחות חדשים החודש', value: monthCustomers, icon: '📈', delay: 40 })}
+            ${statCard({ label: 'משימות כללי', value: taskCount, icon: '✓', delay: 80 })}
+            ${statCard({ label: 'משימות שהושלמו', value: `${completedTasks}/${taskCount}`, icon: '✅', pill: completionPct !== null ? `${completionPct}%` : null, delay: 120 })}
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+            ${trendChart}
+            ${statusChart}
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 hover-lift anim-card" style="animation-delay:280ms;">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🔥 לקוחות אחרונים</h3>
               <div class="space-y-3">
+                ${customers.length === 0 ? `<p class="text-sm" style="color: var(--muted);">אין עדיין לקוחות</p>` : ''}
                 ${customers.slice(-5).reverse().map(c => `
-                  <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-zinc-800/60 rounded-lg">
                     <div>
                       <p class="font-medium">${c.first_name} ${c.last_name}</p>
-                      <p class="text-sm text-gray-600">${c.email}</p>
+                      <p class="text-sm text-gray-600 dark:text-zinc-400">${c.email}</p>
                     </div>
                     <span class="text-xs px-3 py-1 rounded-full" style="background: var(--light); color: var(--secondary);">חדש</span>
                   </div>
@@ -351,14 +505,15 @@
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 hover-lift anim-card" style="animation-delay:320ms;">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📋 פעילויות אחרונות</h3>
               <div class="space-y-3">
+                ${activities.length === 0 ? `<p class="text-sm" style="color: var(--muted);">אין עדיין פעילות רשומה</p>` : ''}
                 ${activities.slice(-5).reverse().map(a => `
-                  <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-zinc-800/60 rounded-lg">
                     <div>
                       <p class="font-medium text-sm">${a.description || a.event}</p>
-                      <p class="text-xs text-gray-600">${new Date(a.created_at).toLocaleDateString('he-IL')}</p>
+                      <p class="text-xs text-gray-600 dark:text-zinc-400">${new Date(a.created_at).toLocaleDateString('he-IL')}</p>
                     </div>
                   </div>
                 `).join('')}
@@ -367,24 +522,39 @@
           </div>
         `;
 
+        // Animate KPI numbers counting up from 0 to their target value.
+        content.querySelectorAll('.count-up').forEach(el => {
+          const target = Number(el.dataset.target);
+          if (!target) return;
+          const duration = 600;
+          const start = performance.now();
+          function tick(now) {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(target * eased);
+            if (progress < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        });
+
       } else if (currentView === 'customers') {
         document.getElementById('pageTitle').textContent = '👥 לקוחות';
         content.innerHTML = `
           <div class="mb-6">
-            <form id="customerForm" class="bg-white p-6 rounded-xl shadow space-y-4">
+            <form id="customerForm" class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow space-y-4">
               <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" id="firstName" placeholder="שם פרטי" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="text" id="lastName" placeholder="שם משפחה" class="px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="email" id="email" placeholder="דוא״ל" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="phone" id="phone" placeholder="טלפון" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="text" id="firstName" placeholder="שם פרטי" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                <input type="text" id="lastName" placeholder="שם משפחה" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                <input type="email" id="email" placeholder="דוא״ל" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                <input type="phone" id="phone" placeholder="טלפון" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
               </div>
               <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" id="company" placeholder="חברה" class="px-4 py-2 border border-gray-300 rounded-lg">
-                <select id="pipeline" onchange="updateStageOptions()" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <input type="text" id="company" placeholder="חברה" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                <select id="pipeline" onchange="updateStageOptions()" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
                   <option value="">בחר Pipeline</option>
                   ${pipelines.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                 </select>
-                <select id="stage" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <select id="stage" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
                   <option value="">בחר שלב</option>
                 </select>
                 <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף לקוח</button>
@@ -392,9 +562,9 @@
             </form>
           </div>
 
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade overflow-hidden">
             <table class="w-full">
-              <thead class="bg-gray-100">
+              <thead class="bg-gray-100 dark:bg-zinc-800">
                 <tr>
                   <th class="px-6 py-4 font-bold" style="color: var(--secondary);">שם</th>
                   <th class="px-6 py-4 font-bold" style="color: var(--secondary);">דוא״ל</th>
@@ -409,7 +579,7 @@
                   const pipeline = pipelines.find(p => p.id === c.pipeline_id);
                   const stage = stages.find(s => s.id === c.stage_id);
                   return `
-                    <tr class="border-b hover:bg-gray-50">
+                    <tr class="border-b hover:bg-gray-50 dark:hover:bg-zinc-800">
                       <td class="px-6 py-4 font-medium">${c.first_name} ${c.last_name}</td>
                       <td class="px-6 py-4 text-sm">${c.email}</td>
                       <td class="px-6 py-4 text-sm">${c.company || '-'}</td>
@@ -477,14 +647,14 @@
         content.innerHTML = `
           <div class="mb-6">
             <div class="flex gap-2 flex-wrap">
-              <input type="text" id="pipelineName" placeholder="שם Pipeline חדש" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg">
+              <input type="text" id="pipelineName" placeholder="שם Pipeline חדש" class="flex-1 px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
               <button onclick="createNewPipeline()" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ יצור Pipeline</button>
             </div>
           </div>
 
           ${pipelines.length === 0 ? `
-            <div class="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
-              <p class="text-gray-600 mb-4">אין עדיין Pipelines</p>
+            <div class="bg-blue-50 border border-blue-200 dark:border-indigo-900 rounded-xl p-8 text-center">
+              <p class="text-gray-600 dark:text-zinc-400 mb-4">אין עדיין Pipelines</p>
               <button onclick="document.getElementById('pipelineName').focus()" class="text-blue-600 hover:text-blue-800 font-medium">צור ראשון עכשיו →</button>
             </div>
           ` : ''}
@@ -500,12 +670,12 @@
 
               ${pStages.length === 0 ? `
                 <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center mb-4">
-                  <p class="text-gray-600">אין שלבים ל-Pipeline הזה עדיין. הוסף שלבים ידנית למטה ↓</p>
+                  <p class="text-gray-600 dark:text-zinc-400">אין שלבים ל-Pipeline הזה עדיין. הוסף שלבים ידנית למטה ↓</p>
                 </div>
               ` : `
                 <div class="grid gap-4 mb-4" style="grid-template-columns: repeat(${pStages.length}, minmax(220px, 1fr));">
                   ${pStages.map(stage => `
-                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="bg-white dark:bg-zinc-900 rounded-lg shadow overflow-hidden">
                       <div class="p-4 flex justify-between items-start gap-2" style="background-color: ${stage.color}; color: white;">
                         <div>
                           <h4 class="font-bold text-sm">${stage.name}</h4>
@@ -514,7 +684,7 @@
                         <button onclick="deleteStage('${stage.id}')" title="מחק שלב" class="text-white text-xs opacity-80 hover:opacity-100">✕</button>
                       </div>
 
-                      <div class="p-3 min-h-96 bg-gray-50 overflow-y-auto"
+                      <div class="p-3 min-h-96 bg-gray-50 dark:bg-zinc-800/60 overflow-y-auto"
                            id="stage-${p.id}-${stage.id}"
                            ondrop="handleDrop(event, '${p.id}', '${stage.id}')"
                            ondragover="handleDragOver(event)"
@@ -522,14 +692,14 @@
                            style="min-height: 400px;">
 
                         ${customers.filter(c => c.pipeline_id === p.id && c.stage_id === stage.id).map(c => `
-                          <div class="bg-white p-3 rounded-lg shadow mb-2 cursor-move hover:shadow-md transition border-r-4"
+                          <div class="bg-white dark:bg-zinc-900 p-3 rounded-lg shadow mb-2 cursor-move hover:shadow-md transition border-r-4"
                                style="border-color: ${stage.color};"
                                draggable="true"
                                ondragstart="handleDragStart(event, '${c.id}', '${p.id}')"
                                ondragend="handleDragEnd(event)">
                             <p class="font-medium text-sm">${c.first_name} ${c.last_name}</p>
-                            <p class="text-xs text-gray-600 truncate">${c.email}</p>
-                            <p class="text-xs text-gray-500 mt-1">${c.company || '-'}</p>
+                            <p class="text-xs text-gray-600 dark:text-zinc-400 truncate">${c.email}</p>
+                            <p class="text-xs text-gray-500 dark:text-zinc-500 mt-1">${c.company || '-'}</p>
                           </div>
                         `).join('')}
                       </div>
@@ -538,9 +708,9 @@
                 </div>
               `}
 
-              <div class="bg-white rounded-lg shadow p-4 flex gap-2 flex-wrap items-center">
-                <input type="text" placeholder="שם שלב חדש" id="newStageName-${p.id}" class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                <input type="color" id="newStageColor-${p.id}" value="#3B82F6" class="h-10 w-14 border border-gray-300 rounded-lg cursor-pointer">
+              <div class="bg-white dark:bg-zinc-900 rounded-lg shadow p-4 flex gap-2 flex-wrap items-center">
+                <input type="text" placeholder="שם שלב חדש" id="newStageName-${p.id}" class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg text-sm">
+                <input type="color" id="newStageColor-${p.id}" value="#3B82F6" class="h-10 w-14 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg cursor-pointer">
                 <button onclick="createStage('${p.id}')" class="text-white font-bold px-4 py-2 rounded-lg text-sm" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף שלב</button>
               </div>
             </div>
@@ -598,10 +768,10 @@
         document.getElementById('pageTitle').textContent = '✓ משימות';
 
         const taskColumns = [
-          { status: 'open', label: '📋 פתוח', bg: 'bg-blue-50', border: 'border-blue-200' },
-          { status: 'in_progress', label: '⚙️ בהביצוע', bg: 'bg-yellow-50', border: 'border-yellow-200' },
-          { status: 'completed', label: '✅ הושלמו', bg: 'bg-green-50', border: 'border-green-200' },
-          { status: 'cancelled', label: '🚫 בוטלו', bg: 'bg-gray-100', border: 'border-gray-300' }
+          { status: 'open', label: '📋 פתוח', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-900' },
+          { status: 'in_progress', label: '⚙️ בהביצוע', bg: 'bg-yellow-50 dark:bg-yellow-950/30', border: 'border-yellow-200 dark:border-yellow-900' },
+          { status: 'completed', label: '✅ הושלמו', bg: 'bg-green-50 dark:bg-emerald-950/30', border: 'border-green-200 dark:border-emerald-900' },
+          { status: 'cancelled', label: '🚫 בוטלו', bg: 'bg-gray-100 dark:bg-zinc-800', border: 'border-gray-300 dark:border-zinc-700' }
         ];
 
         const priorityLabel = { low: '👇 נמוכה', medium: '➡️ בינונית', high: '👆 גבוהה' };
@@ -622,41 +792,41 @@
 
         content.innerHTML = `
           <div class="mb-6">
-            <form id="taskForm" class="bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-5 gap-2">
-              <input type="text" id="taskTitle" placeholder="כותרת משימה" required class="px-4 py-2 border border-gray-300 rounded-lg">
-              <select id="taskPriority" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <form id="taskForm" class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-5 gap-2">
+              <input type="text" id="taskTitle" placeholder="כותרת משימה" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+              <select id="taskPriority" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
                 <option value="low">👇 נמוכה</option>
                 <option value="medium" selected>➡️ בינונית</option>
                 <option value="high">👆 גבוהה</option>
               </select>
-              <select id="taskAssignee" class="px-4 py-2 border border-gray-300 rounded-lg">
+              <select id="taskAssignee" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
                 <option value="">👤 לא משויך</option>
                 ${employees.map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
               </select>
-              <input type="date" id="taskDue" class="px-4 py-2 border border-gray-300 rounded-lg">
+              <input type="date" id="taskDue" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
               <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף משימה</button>
             </form>
           </div>
 
-          <div class="mb-6 bg-white p-4 rounded-xl shadow flex flex-wrap items-end gap-2">
+          <div class="mb-6 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow flex flex-wrap items-end gap-2">
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">משימות שהושלמו מתאריך</label>
-              <input type="date" id="taskFilterFrom" value="${taskFilterFrom}" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <label class="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">משימות שהושלמו מתאריך</label>
+              <input type="date" id="taskFilterFrom" value="${taskFilterFrom}" class="px-3 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg text-sm">
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">עד תאריך</label>
-              <input type="date" id="taskFilterTo" value="${taskFilterTo}" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <label class="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">עד תאריך</label>
+              <input type="date" id="taskFilterTo" value="${taskFilterTo}" class="px-3 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg text-sm">
             </div>
             <button onclick="applyTaskDateFilter()" style="background: var(--primary);" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='var(--primary)'" class="text-white font-bold px-4 py-2 rounded-lg text-sm">🔍 סנן</button>
-            ${(taskFilterFrom || taskFilterTo) ? `<button onclick="clearTaskDateFilter()" class="text-gray-600 hover:text-gray-800 text-sm">✕ נקה סינון</button>` : ''}
+            ${(taskFilterFrom || taskFilterTo) ? `<button onclick="clearTaskDateFilter()" class="text-gray-600 dark:text-zinc-400 hover:text-gray-800 dark:text-zinc-100 text-sm">✕ נקה סינון</button>` : ''}
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             ${taskColumns.map(col => `
-              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade overflow-hidden">
                 <div class="p-4 border-b ${col.border}">
                   <h3 class="text-sm font-bold" style="color: var(--secondary);">${col.label}</h3>
-                  <p class="text-xs text-gray-500 mt-1">${tasksForColumn(col.status).length} משימות</p>
+                  <p class="text-xs text-gray-500 dark:text-zinc-500 mt-1">${tasksForColumn(col.status).length} משימות</p>
                 </div>
                 <div class="p-3 min-h-96 ${col.bg} space-y-3"
                      id="task-col-${col.status}"
@@ -665,17 +835,17 @@
                      ondragleave="handleTaskDragLeave(event)"
                      style="min-height: 400px;">
                   ${tasksForColumn(col.status).map(t => `
-                    <div class="bg-white p-4 rounded-lg shadow cursor-move hover:shadow-md transition border ${col.border}"
+                    <div class="bg-white dark:bg-zinc-900 p-4 rounded-lg shadow cursor-move hover:shadow-md transition border ${col.border}"
                          draggable="true"
                          ondragstart="handleTaskDragStart(event, '${t.id}')"
                          ondragend="handleTaskDragEnd(event)">
-                      <p class="font-medium ${col.status === 'completed' ? 'line-through text-gray-500' : ''}">${t.title}</p>
-                      <p class="text-xs text-gray-600 mt-1">${priorityLabel[t.priority] || t.priority}</p>
-                      ${t.due_date ? `<p class="text-xs text-gray-500 mt-1">יעד: ${t.due_date}</p>` : ''}
-                      ${t.completed_at ? `<p class="text-xs text-gray-500 mt-1">הושלם: ${new Date(t.completed_at).toLocaleDateString('he-IL')}</p>` : ''}
+                      <p class="font-medium ${col.status === 'completed' ? 'line-through text-gray-500 dark:text-zinc-500' : ''}">${t.title}</p>
+                      <p class="text-xs text-gray-600 dark:text-zinc-400 mt-1">${priorityLabel[t.priority] || t.priority}</p>
+                      ${t.due_date ? `<p class="text-xs text-gray-500 dark:text-zinc-500 mt-1">יעד: ${t.due_date}</p>` : ''}
+                      ${t.completed_at ? `<p class="text-xs text-gray-500 dark:text-zinc-500 mt-1">הושלם: ${new Date(t.completed_at).toLocaleDateString('he-IL')}</p>` : ''}
                       <div class="mt-2" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
-                        <label class="text-xs text-gray-500">👤</label>
-                        <select onchange="reassignTask('${t.id}', this.value)" draggable="false" class="text-xs border border-gray-300 rounded px-1 py-0.5">
+                        <label class="text-xs text-gray-500 dark:text-zinc-500">👤</label>
+                        <select onchange="reassignTask('${t.id}', this.value)" draggable="false" class="text-xs border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded px-1 py-0.5">
                           <option value="">לא משויך</option>
                           ${employees.map(u => `<option value="${u.id}" ${t.assigned_to === u.id ? 'selected' : ''}>${u.name}</option>`).join('')}
                         </select>
@@ -717,9 +887,9 @@
       } else if (currentView === 'activity') {
         document.getElementById('pageTitle').textContent = '📝 פעילות';
         content.innerHTML = `
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade overflow-hidden">
             <table class="w-full">
-              <thead class="bg-gray-100">
+              <thead class="bg-gray-100 dark:bg-zinc-800">
                 <tr>
                   <th class="px-6 py-4 font-bold">אירוע</th>
                   <th class="px-6 py-4 font-bold">תיאור</th>
@@ -729,13 +899,13 @@
               </thead>
               <tbody>
                 ${activities.length === 0 ? `
-                  <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">אין עדיין פעילות רשומה</td></tr>
+                  <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-zinc-500">אין עדיין פעילות רשומה</td></tr>
                 ` : activities.map(a => `
-                  <tr class="border-b hover:bg-gray-50">
+                  <tr class="border-b hover:bg-gray-50 dark:hover:bg-zinc-800">
                     <td class="px-6 py-4 font-medium">${a.event}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600">${a.description || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-zinc-400">${a.description || '-'}</td>
                     <td class="px-6 py-4 text-sm">
-                      <span class="px-2 py-1 rounded text-xs font-medium ${a.source === 'api' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}">${a.source === 'api' ? 'API' : 'ידני'}</span>
+                      <span class="px-2 py-1 rounded text-xs font-medium ${a.source === 'api' ? 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300'}">${a.source === 'api' ? 'API' : 'ידני'}</span>
                     </td>
                     <td class="px-6 py-4 text-sm">${new Date(a.created_at).toLocaleString('he-IL')}</td>
                   </tr>
@@ -749,8 +919,8 @@
         document.getElementById('pageTitle').textContent = '🔗 Webhooks';
         content.innerHTML = `
           <div class="mb-6">
-            <form id="webhookForm" class="grid grid-cols-1 md:grid-cols-3 gap-2 bg-white p-6 rounded-xl shadow">
-              <select id="event" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <form id="webhookForm" class="grid grid-cols-1 md:grid-cols-3 gap-2 bg-white dark:bg-zinc-900 p-6 rounded-xl shadow">
+              <select id="event" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
                 <option value="customer.created">customer.created</option>
                 <option value="customer.updated">customer.updated</option>
                 <option value="customer.stage_changed">customer.stage_changed</option>
@@ -758,23 +928,23 @@
                 <option value="task.created">task.created</option>
                 <option value="task.completed">task.completed</option>
               </select>
-              <input type="url" placeholder="URL" id="webhookUrl" required class="px-4 py-2 border border-gray-300 rounded-lg">
+              <input type="url" placeholder="URL" id="webhookUrl" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
               <button type="submit" style="background: var(--primary);" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='var(--primary)'" class="text-white font-bold px-6 py-2 rounded-lg">הוסף Webhook</button>
             </form>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             ${webhooks.map(w => `
-              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade p-6">
                 <div class="flex justify-between items-start mb-4">
                   <div>
                     <h3 class="text-lg font-bold">${w.event}</h3>
-                    <p class="text-sm text-gray-600 break-all">${w.url}</p>
+                    <p class="text-sm text-gray-600 dark:text-zinc-400 break-all">${w.url}</p>
                   </div>
                   <button onclick="deleteWebhook('${w.id}')" class="text-red-600 hover:text-red-800 font-medium">מחק</button>
                 </div>
                 <div class="flex justify-between items-center">
-                  <p class="text-xs text-gray-500">נוצר: ${new Date(w.created_at).toLocaleDateString('he-IL')}</p>
+                  <p class="text-xs text-gray-500 dark:text-zinc-500">נוצר: ${new Date(w.created_at).toLocaleDateString('he-IL')}</p>
                   <button onclick="viewWebhookLogs('${w.id}')" class="text-xs text-blue-600 hover:text-blue-800">📋 היסטוריית שליחות</button>
                 </div>
               </div>
@@ -804,8 +974,8 @@
         document.getElementById('pageTitle').textContent = '🔑 API Keys';
         content.innerHTML = `
           <div class="mb-6">
-            <form id="apiKeyForm" class="flex gap-2 bg-white p-6 rounded-xl shadow">
-              <input type="text" placeholder="שם API Key" id="keyName" required class="flex-1 px-4 py-2 border border-gray-300 rounded-lg">
+            <form id="apiKeyForm" class="flex gap-2 bg-white dark:bg-zinc-900 p-6 rounded-xl shadow">
+              <input type="text" placeholder="שם API Key" id="keyName" required class="flex-1 px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
               <button type="submit" style="background: var(--primary);" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='var(--primary)'" class="text-white font-bold px-6 py-2 rounded-lg">צור</button>
             </form>
           </div>
@@ -814,19 +984,19 @@
             <div class="mb-6 bg-green-50 border-2 border-green-300 rounded-xl p-6">
               <div class="flex justify-between items-start mb-2">
                 <h3 class="font-bold text-green-800">🔑 המפתח "${lastCreatedApiKey.name}"</h3>
-                <button onclick="dismissApiKeyBanner()" class="text-gray-500 hover:text-gray-700">✕</button>
+                <button onclick="dismissApiKeyBanner()" class="text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:text-zinc-300">✕</button>
               </div>
-              <p class="text-xs text-gray-600 mb-2">ניתן גם לחזור ולהציג את המפתח בכל רגע דרך הכפתור "👁️ הצג" ליד השורה שלו בטבלה.</p>
+              <p class="text-xs text-gray-600 dark:text-zinc-400 mb-2">ניתן גם לחזור ולהציג את המפתח בכל רגע דרך הכפתור "👁️ הצג" ליד השורה שלו בטבלה.</p>
               <div class="flex gap-2 items-center">
-                <code class="flex-1 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm font-mono break-all">${lastCreatedApiKey.key}</code>
+                <code class="flex-1 bg-white dark:bg-zinc-900 dark:text-zinc-100 border border-green-300 dark:border-emerald-800 rounded-lg px-3 py-2 text-sm font-mono break-all">${lastCreatedApiKey.key}</code>
                 <button onclick="copyApiKey('${lastCreatedApiKey.key}')" class="bg-green-600 text-white font-bold px-4 py-2 rounded-lg text-sm hover:bg-green-700 whitespace-nowrap">📋 העתק</button>
               </div>
             </div>
           ` : ''}
 
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade overflow-hidden mb-6">
             <table class="w-full">
-              <thead class="bg-gray-100">
+              <thead class="bg-gray-100 dark:bg-zinc-800">
                 <tr>
                   <th class="px-6 py-4 font-bold">שם</th>
                   <th class="px-6 py-4 font-bold">Key Preview</th>
@@ -836,7 +1006,7 @@
               </thead>
               <tbody>
                 ${apiKeys.map(k => `
-                  <tr class="border-b hover:bg-gray-50">
+                  <tr class="border-b hover:bg-gray-50 dark:hover:bg-zinc-800">
                     <td class="px-6 py-4 font-medium">${k.name}</td>
                     <td class="px-6 py-4 text-sm font-mono">${k.key_preview}</td>
                     <td class="px-6 py-4 text-sm">${new Date(k.created_at).toLocaleDateString('he-IL')}</td>
@@ -850,14 +1020,14 @@
             </table>
           </div>
 
-          <div class="bg-blue-50 rounded-2xl shadow-sm p-6 border border-blue-200">
+          <div class="bg-blue-50 dark:bg-indigo-950/40 rounded-2xl shadow-sm p-6 border border-blue-200 dark:border-indigo-900">
             <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">📚 הכנסת מידע למערכת דרך API</h3>
-            <p class="text-sm text-gray-700 mb-3">ניתן ליצור לקוחות/לידים או משימות ישירות מ-Activepieces או כל מערכת חיצונית, באמצעות ה-API Key בכותרת <code class="bg-white px-1 rounded">x-api-key</code>:</p>
-            <pre class="bg-white border border-blue-200 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">curl -X POST ${API_URL}/customers \\
+            <p class="text-sm text-gray-700 dark:text-zinc-300 mb-3">ניתן ליצור לקוחות/לידים או משימות ישירות מ-Activepieces או כל מערכת חיצונית, באמצעות ה-API Key בכותרת <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">x-api-key</code>:</p>
+            <pre class="bg-white dark:bg-zinc-900 dark:text-zinc-100 border border-blue-200 dark:border-indigo-900 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">curl -X POST ${API_URL}/customers \\
   -H "x-api-key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"first_name":"Lead","last_name":"Name","email":"lead@example.com"}'</pre>
-            <p class="text-xs text-gray-600 mt-2">אותו אימות עובד גם עבור <code class="bg-white px-1 rounded">POST ${API_URL}/tasks</code>.</p>
+            <p class="text-xs text-gray-600 dark:text-zinc-400 mt-2">אותו אימות עובד גם עבור <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">POST ${API_URL}/tasks</code>.</p>
           </div>
         `;
 
@@ -897,12 +1067,12 @@
         content.innerHTML = `
           <div class="max-w-4xl space-y-6">
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade p-6">
               <h3 class="text-lg font-bold mb-2" style="color: var(--secondary);">🔌 חיבור מ-n8n אל ה-CRM</h3>
-              <p class="text-sm text-gray-700 mb-3">כל הקריאות מבוצעות מול כתובת הבסיס הבאה, עם כותרת אימות <code class="bg-gray-100 px-1 rounded">x-api-key</code> (במקום Bearer token, שמיועד רק להתחברות משתמשים דרך המסך):</p>
+              <p class="text-sm text-gray-700 dark:text-zinc-300 mb-3">כל הקריאות מבוצעות מול כתובת הבסיס הבאה, עם כותרת אימות <code class="bg-gray-100 dark:bg-zinc-800 px-1 rounded">x-api-key</code> (במקום Bearer token, שמיועד רק להתחברות משתמשים דרך המסך):</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">Base URL: ${API_URL}
 Header:   x-api-key: YOUR_API_KEY</pre>
-              <p class="text-xs text-gray-600 mt-3">
+              <p class="text-xs text-gray-600 dark:text-zinc-400 mt-3">
                 ${activeKeyNames
                   ? `יש לך כרגע מפתחות פעילים בשם: <b>${activeKeyNames}</b>.`
                   : 'עדיין אין לך API Key פעיל.'}
@@ -910,24 +1080,24 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               </p>
             </div>
 
-            <div class="bg-blue-50 rounded-2xl shadow-sm p-6 border border-blue-200">
+            <div class="bg-blue-50 dark:bg-indigo-950/40 rounded-2xl shadow-sm p-6 border border-blue-200 dark:border-indigo-900">
               <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">⚙️ הגדרת HTTP Request node ב-n8n</h3>
-              <ol class="space-y-2 text-sm text-gray-700 list-decimal pr-5">
+              <ol class="space-y-2 text-sm text-gray-700 dark:text-zinc-300 list-decimal pr-5">
                 <li>הוסיפו node מסוג <b>HTTP Request</b>.</li>
                 <li>Method: לפי הפעולה בטבלה למטה (GET / POST / PATCH).</li>
-                <li>URL: <code class="bg-white px-1 rounded" dir="ltr">${API_URL}/&lt;endpoint&gt;</code></li>
-                <li>Authentication → <b>Generic Credential Type</b> → <b>Header Auth</b>, עם Name = <code class="bg-white px-1 rounded" dir="ltr">x-api-key</code> ו-Value = המפתח שלכם.</li>
+                <li>URL: <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded" dir="ltr">${API_URL}/&lt;endpoint&gt;</code></li>
+                <li>Authentication → <b>Generic Credential Type</b> → <b>Header Auth</b>, עם Name = <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded" dir="ltr">x-api-key</code> ו-Value = המפתח שלכם.</li>
                 <li>Body Content Type: <b>JSON</b>, לפי השדות בטבלה.</li>
               </ol>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade overflow-hidden">
               <div class="p-4 border-b">
                 <h3 class="text-lg font-bold" style="color: var(--secondary);">📋 Endpoints זמינים דרך API Key</h3>
-                <p class="text-xs text-gray-500 mt-1">כל הבקשות מסוננות אוטומטית לעסק שאליו שייך המפתח - אי אפשר לגעת בנתונים של עסק אחר.</p>
+                <p class="text-xs text-gray-500 dark:text-zinc-500 mt-1">כל הבקשות מסוננות אוטומטית לעסק שאליו שייך המפתח - אי אפשר לגעת בנתונים של עסק אחר.</p>
               </div>
               <table class="w-full text-sm">
-                <thead class="bg-gray-100">
+                <thead class="bg-gray-100 dark:bg-zinc-800">
                   <tr>
                     <th class="px-4 py-3 text-right font-bold">Method</th>
                     <th class="px-4 py-3 text-right font-bold">Path</th>
@@ -937,11 +1107,11 @@ Header:   x-api-key: YOUR_API_KEY</pre>
                 </thead>
                 <tbody>
                   ${endpointRows.map(r => `
-                    <tr class="border-b align-top hover:bg-gray-50">
+                    <tr class="border-b align-top hover:bg-gray-50 dark:hover:bg-zinc-800">
                       <td class="px-4 py-3 font-mono font-bold ${r.m === 'GET' ? 'text-blue-600' : r.m === 'POST' ? 'text-green-600' : 'text-orange-600'}">${r.m}</td>
                       <td class="px-4 py-3 font-mono text-xs" dir="ltr">${r.p}</td>
                       <td class="px-4 py-3">${r.desc}</td>
-                      <td class="px-4 py-3">${r.body ? `<code class="text-xs bg-gray-100 px-1 rounded break-all" dir="ltr">${r.body}</code>` : '<span class="text-gray-400 text-xs">—</span>'}</td>
+                      <td class="px-4 py-3">${r.body ? `<code class="text-xs bg-gray-100 dark:bg-zinc-800 px-1 rounded break-all" dir="ltr">${r.body}</code>` : '<span class="text-gray-400 text-xs">—</span>'}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -949,11 +1119,11 @@ Header:   x-api-key: YOUR_API_KEY</pre>
             </div>
 
             ${employees.length > 0 ? `
-              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade p-6">
                 <h3 class="text-lg font-bold mb-2" style="color: var(--secondary);">👤 מזהי עובדים לשיוך משימות (assigned_to)</h3>
-                <p class="text-sm text-gray-700 mb-3">כדי לשייך משימה שנוצרת מ-n8n לעובד ספציפי, שימו את ה-ID שלו בשדה <code class="bg-gray-100 px-1 rounded">assigned_to</code> בבקשת ה-POST/PATCH ל-<code class="bg-gray-100 px-1 rounded">/tasks</code>:</p>
+                <p class="text-sm text-gray-700 dark:text-zinc-300 mb-3">כדי לשייך משימה שנוצרת מ-n8n לעובד ספציפי, שימו את ה-ID שלו בשדה <code class="bg-gray-100 dark:bg-zinc-800 px-1 rounded">assigned_to</code> בבקשת ה-POST/PATCH ל-<code class="bg-gray-100 dark:bg-zinc-800 px-1 rounded">/tasks</code>:</p>
                 <table class="w-full text-sm">
-                  <thead class="bg-gray-100">
+                  <thead class="bg-gray-100 dark:bg-zinc-800">
                     <tr><th class="px-4 py-2 text-right font-bold">שם</th><th class="px-4 py-2 text-right font-bold">User ID</th></tr>
                   </thead>
                   <tbody>
@@ -968,30 +1138,30 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               </div>
             ` : ''}
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade p-6">
               <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">💻 דוגמאות curl</h3>
-              <p class="text-xs text-gray-500 mb-2">יצירת ליד חדש:</p>
+              <p class="text-xs text-gray-500 dark:text-zinc-500 mb-2">יצירת ליד חדש:</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto mb-4" dir="ltr">curl -X POST ${API_URL}/customers \\
   -H "x-api-key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"first_name":"Lead","last_name":"Name","email":"lead@example.com"}'</pre>
-              <p class="text-xs text-gray-500 mb-2">יצירת משימה משויכת לעובד:</p>
+              <p class="text-xs text-gray-500 dark:text-zinc-500 mb-2">יצירת משימה משויכת לעובד:</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto mb-4" dir="ltr">curl -X POST ${API_URL}/tasks \\
   -H "x-api-key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"title":"התקשר ללקוח","priority":"high","assigned_to":"USER_ID"}'</pre>
-              <p class="text-xs text-gray-500 mb-2">שינוי סטטוס משימה:</p>
+              <p class="text-xs text-gray-500 dark:text-zinc-500 mb-2">שינוי סטטוס משימה:</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">curl -X PATCH ${API_URL}/tasks/TASK_ID \\
   -H "x-api-key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"status":"completed"}'</pre>
             </div>
 
-            <div class="bg-purple-50 rounded-2xl shadow-sm p-6 border border-purple-200">
+            <div class="bg-purple-50 dark:bg-purple-950/40 rounded-2xl shadow-sm p-6 border border-purple-200 dark:border-purple-900">
               <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">📤 כיוון הפוך: CRM שולח אירועים ל-n8n (Webhooks)</h3>
-              <p class="text-sm text-gray-700 mb-3">כדי שה-CRM יפעיל workflow ב-n8n אוטומטית (למשל בכל פעם שנוצר ליד), הקימו ב-n8n node מסוג <b>Webhook</b> (Trigger), העתיקו את ה-Production URL שלו, ורשמו אותו בעמוד <button onclick="switchView('webhooks')" class="text-blue-600 underline">🔗 Webhooks</button> של ה-CRM.</p>
-              <p class="text-xs text-gray-600 mb-2">אירועים זמינים: <code class="bg-white px-1 rounded">customer.created</code>, <code class="bg-white px-1 rounded">customer.updated</code>, <code class="bg-white px-1 rounded">customer.stage_changed</code>, <code class="bg-white px-1 rounded">customer.deleted</code>, <code class="bg-white px-1 rounded">task.created</code>, <code class="bg-white px-1 rounded">task.completed</code>.</p>
-              <p class="text-xs text-gray-600 mb-2">גוף הבקשה שיישלח ל-n8n (POST, JSON):</p>
+              <p class="text-sm text-gray-700 dark:text-zinc-300 mb-3">כדי שה-CRM יפעיל workflow ב-n8n אוטומטית (למשל בכל פעם שנוצר ליד), הקימו ב-n8n node מסוג <b>Webhook</b> (Trigger), העתיקו את ה-Production URL שלו, ורשמו אותו בעמוד <button onclick="switchView('webhooks')" class="text-blue-600 underline">🔗 Webhooks</button> של ה-CRM.</p>
+              <p class="text-xs text-gray-600 dark:text-zinc-400 mb-2">אירועים זמינים: <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.created</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.updated</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.stage_changed</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">customer.deleted</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">task.created</code>, <code class="bg-white dark:bg-zinc-800 dark:text-zinc-100 px-1 rounded">task.completed</code>.</p>
+              <p class="text-xs text-gray-600 dark:text-zinc-400 mb-2">גוף הבקשה שיישלח ל-n8n (POST, JSON):</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">{
   "event_id": "...",
   "event": "task.created",
@@ -1008,20 +1178,20 @@ Header:   x-api-key: YOUR_API_KEY</pre>
         document.getElementById('pageTitle').textContent = '👤 עובדים';
         content.innerHTML = `
           <div class="mb-6">
-            <form id="userForm" class="bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-5 gap-2">
-              <input type="text" id="empName" placeholder="שם מלא" required class="px-4 py-2 border border-gray-300 rounded-lg">
-              <input type="email" id="empEmail" placeholder="אימייל" required class="px-4 py-2 border border-gray-300 rounded-lg">
-              <input type="password" id="empPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 rounded-lg">
-              <select id="empRole" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <form id="userForm" class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-5 gap-2">
+              <input type="text" id="empName" placeholder="שם מלא" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+              <input type="email" id="empEmail" placeholder="אימייל" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+              <input type="password" id="empPassword" placeholder="סיסמה (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+              <select id="empRole" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
                 ${Object.entries(ROLE_LABELS).map(([role, label]) => `<option value="${role}">${label}</option>`).join('')}
               </select>
               <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף עובד</button>
             </form>
           </div>
 
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade overflow-hidden">
             <table class="w-full">
-              <thead class="bg-gray-100">
+              <thead class="bg-gray-100 dark:bg-zinc-800">
                 <tr>
                   <th class="px-6 py-4 font-bold">שם</th>
                   <th class="px-6 py-4 font-bold">אימייל</th>
@@ -1032,11 +1202,11 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               </thead>
               <tbody>
                 ${employees.map(u => `
-                  <tr class="border-b hover:bg-gray-50">
+                  <tr class="border-b hover:bg-gray-50 dark:hover:bg-zinc-800">
                     <td class="px-6 py-4 font-medium">${u.name} ${currentUser && u.id === currentUser.id ? '<span class="text-xs text-blue-600">(אתה)</span>' : ''}</td>
                     <td class="px-6 py-4 text-sm">${u.email}</td>
                     <td class="px-6 py-4 text-sm">
-                      <select onchange="updateUserRole('${u.id}', this.value)" class="px-2 py-1 border border-gray-300 rounded text-sm" ${currentUser && u.id === currentUser.id ? 'disabled' : ''}>
+                      <select onchange="updateUserRole('${u.id}', this.value)" class="px-2 py-1 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded text-sm" ${currentUser && u.id === currentUser.id ? 'disabled' : ''}>
                         ${Object.entries(ROLE_LABELS).map(([role, label]) => `<option value="${role}" ${u.role === role ? 'selected' : ''}>${label}</option>`).join('')}
                       </select>
                     </td>
@@ -1075,21 +1245,21 @@ Header:   x-api-key: YOUR_API_KEY</pre>
         document.getElementById('pageTitle').textContent = '⚙️ הגדרות';
         content.innerHTML = `
           <div class="max-w-2xl">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade p-6 mb-6">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🔗 חיבור Google Sheets</h3>
               <form id="settingsForm" class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium mb-2" style="color: var(--secondary);">Spreadsheet ID</label>
-                  <input type="text" id="spreadsheetId" placeholder="הדביק את ה-Spreadsheet ID מ-Google Sheets" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg">
-                  <p class="text-xs text-gray-600 mt-2">ניתן למצוא בכתובת ה-URL של הגיליון: /spreadsheets/d/<b>ID</b>/edit</p>
+                  <input type="text" id="spreadsheetId" placeholder="הדביק את ה-Spreadsheet ID מ-Google Sheets" class="w-full px-4 py-2 border-2 border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                  <p class="text-xs text-gray-600 dark:text-zinc-400 mt-2">ניתן למצוא בכתובת ה-URL של הגיליון: /spreadsheets/d/<b>ID</b>/edit</p>
                 </div>
                 <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">💾 שמור הגדרות</button>
               </form>
             </div>
 
-            <div class="bg-blue-50 rounded-2xl shadow-sm p-6 border border-blue-200 mb-6">
+            <div class="bg-blue-50 dark:bg-indigo-950/40 rounded-2xl shadow-sm p-6 border border-blue-200 dark:border-indigo-900 mb-6">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📚 כיצד להגדיר את Google Sheets?</h3>
-              <ol class="space-y-3 text-sm text-gray-700">
+              <ol class="space-y-3 text-sm text-gray-700 dark:text-zinc-300">
                 <li><span class="font-bold">1.</span> צור קובץ Google Sheets ריק (אחד בלבד, לא צריך ליצור בו גיליונות)</li>
                 <li><span class="font-bold">2.</span> שתף את הקובץ עם כתובת חשבון השירות (Service Account) מ-Google Cloud</li>
                 <li><span class="font-bold">3.</span> הדביק כאן את ה-ID מתוך כתובת ה-URL ולחץ "שמור הגדרות"</li>
@@ -1098,27 +1268,27 @@ Header:   x-api-key: YOUR_API_KEY</pre>
             </div>
 
             ${currentUser?.isPlatformOwner ? `
-              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 hover-lift anim-fade p-6 mb-6">
                 <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🏢 ניהול עסקים</h3>
-                <p class="text-xs text-gray-600 mb-4">כל עסק מבודד לחלוטין - ללא שיתוף נתונים בין עסקים. יצירת עסק חדש יוצרת עבורו משתמש מנהל נפרד. "כניסה לצפייה" מאפשרת לך לראות ולנהל את הנתונים של עסק מסוים בלי לדעת את הסיסמה שלו.</p>
+                <p class="text-xs text-gray-600 dark:text-zinc-400 mb-4">כל עסק מבודד לחלוטין - ללא שיתוף נתונים בין עסקים. יצירת עסק חדש יוצרת עבורו משתמש מנהל נפרד. "כניסה לצפייה" מאפשרת לך לראות ולנהל את הנתונים של עסק מסוים בלי לדעת את הסיסמה שלו.</p>
                 <form id="businessForm" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                  <input type="text" id="bizName" placeholder="שם העסק" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                  <input type="text" id="bizAdminName" placeholder="שם מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                  <input type="email" id="bizAdminEmail" placeholder="אימייל מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
-                  <input type="password" id="bizAdminPassword" placeholder="סיסמת מנהל (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <input type="text" id="bizName" placeholder="שם העסק" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                  <input type="text" id="bizAdminName" placeholder="שם מנהל" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                  <input type="email" id="bizAdminEmail" placeholder="אימייל מנהל" required class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
+                  <input type="password" id="bizAdminPassword" placeholder="סיסמת מנהל (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-100 rounded-lg">
                   <button type="submit" class="md:col-span-2 text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ צור עסק חדש</button>
                 </form>
 
                 ${businesses.length > 0 ? `
                   <div class="border-t pt-4">
-                    <h4 class="text-sm font-bold text-gray-600 mb-3">עסקים קיימים</h4>
+                    <h4 class="text-sm font-bold text-gray-600 dark:text-zinc-400 mb-3">עסקים קיימים</h4>
                     <div class="space-y-2">
                       ${businesses.map(b => `
                         <div class="flex flex-wrap justify-between items-center border rounded-lg p-3 gap-2">
                           <div>
                             <span class="font-medium">${b.name}</span>
-                            <span class="mr-2 px-2 py-0.5 rounded text-xs font-medium ${b.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${b.status === 'active' ? 'פעיל' : 'מושבת'}</span>
-                            <span class="text-gray-500 text-xs">נוצר: ${new Date(b.created_at).toLocaleDateString('he-IL')}</span>
+                            <span class="mr-2 px-2 py-0.5 rounded text-xs font-medium ${b.status === 'active' ? 'bg-green-100 dark:bg-emerald-950/50 text-green-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300'}">${b.status === 'active' ? 'פעיל' : 'מושבת'}</span>
+                            <span class="text-gray-500 dark:text-zinc-500 text-xs">נוצר: ${new Date(b.created_at).toLocaleDateString('he-IL')}</span>
                           </div>
                           <div class="flex gap-3 text-sm">
                             ${b.id === currentUser.tenantId ? '<span class="text-xs text-gray-400">העסק הראשי</span>' : `
