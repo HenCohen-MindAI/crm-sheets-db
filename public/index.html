@@ -189,7 +189,7 @@
 
       return `
         <div class="flex h-screen bg-gray-50">
-          <div class="w-64 text-white shadow-lg overflow-y-auto" style="background: linear-gradient(180deg, var(--secondary) 0%, var(--accent) 100%);">
+          <div class="w-64 text-white shadow-lg flex flex-col h-screen" style="background: linear-gradient(180deg, var(--secondary) 0%, var(--accent) 100%);">
             <div class="p-6 border-b border-blue-300 sidebar-header">
               <div class="flex items-center gap-2 justify-end mb-2">
                 <h1 class="text-xl font-bold">MIND AI CRM</h1>
@@ -201,7 +201,7 @@
               </div>
               <p class="text-xs text-gray-200">ניהול לקוחות ועסקים</p>
             </div>
-            <nav class="p-4 space-y-2">
+            <nav class="p-4 space-y-2 flex-1 overflow-y-auto">
               ${['dashboard', 'customers', 'pipelines', 'tasks', 'activity', 'webhooks', 'api-keys', 'api-docs', 'users', 'settings'].map(view => `
                 <button onclick="switchView('${view}')" class="sidebar-item w-full text-right px-4 py-3 rounded-lg ${currentView === view ? 'active' : ''}">
                   ${view === 'dashboard' ? '📊 לוח בקרה' :
@@ -217,7 +217,7 @@
                 </button>
               `).join('')}
             </nav>
-            <div class="absolute bottom-0 w-64 p-4 border-t border-blue-500">
+            <div class="p-4 border-t border-blue-500 flex-shrink-0">
               <button onclick="logout()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg">התנתקות</button>
             </div>
           </div>
