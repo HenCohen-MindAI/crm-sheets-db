@@ -3,10 +3,22 @@ import { v4 as uuidv4 } from 'uuid';
 import { requirePermission } from '../middleware/tenant.js';
 import { triggerWebhook } from './webhooks.js';
 import { logActivity } from './activity.js';
+import { listUsersByTenant } from '../services/user-service.js';
 
 const router = express.Router();
 
 const tasks = new Map();
+
+// Returns the tenant-scoped user for assignment, or throws if the id
+// doesn't belong to this tenant (or doesn't exist).
+function resolveAssignee(tenantId, assignedTo) {
+  if (!assignedTo) return null;
+  const user = listUsersByTenant(tenantId).find(u => u.id === assignedTo);
+  if (!user) {
+    throw new Error('העובד המבוקש לא נמצא בעסק זה');
+  }
+  return user.id;
+}
 
 router.get('/', requirePermission('tasks.view'), (req, res) => {
   const tenantTasks = Array.from(tasks.values())
@@ -19,10 +31,17 @@ router.get('/', requirePermission('tasks.view'), (req, res) => {
 });
 
 router.post('/', requirePermission('tasks.create'), (req, res) => {
-  const { title, description, customer_id, priority, due_date } = req.body;
+  const { title, description, customer_id, priority, due_date, assigned_to } = req.body;
 
   if (!title) {
     return res.status(400).json({ error: 'כותרת משימה חובה' });
+  }
+
+  let assigneeId;
+  try {
+    assigneeId = resolveAssignee(req.tenant.id, assigned_to);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
   }
 
   const task = {
@@ -36,6 +55,7 @@ router.post('/', requirePermission('tasks.create'), (req, res) => {
     due_date: due_date || null,
     completed_at: null,
     user_id: req.tenant.userId,
+    assigned_to: assigneeId,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -61,8 +81,18 @@ router.patch('/:id', requirePermission('tasks.edit'), (req, res) => {
 
   const statusChangedToCompleted = req.body.status === 'completed' && task.status !== 'completed';
 
+  let assigneeUpdate = {};
+  if ('assigned_to' in req.body) {
+    try {
+      assigneeUpdate = { assigned_to: resolveAssignee(req.tenant.id, req.body.assigned_to) };
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
   Object.assign(task, {
     ...req.body,
+    ...assigneeUpdate,
     completed_at: statusChangedToCompleted ? new Date().toISOString() : task.completed_at,
     updated_at: new Date().toISOString()
   });

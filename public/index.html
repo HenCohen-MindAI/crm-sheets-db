@@ -202,7 +202,7 @@
               <p class="text-xs text-gray-200">ניהול לקוחות ועסקים</p>
             </div>
             <nav class="p-4 space-y-2">
-              ${['dashboard', 'customers', 'pipelines', 'tasks', 'activity', 'webhooks', 'api-keys', 'users', 'settings'].map(view => `
+              ${['dashboard', 'customers', 'pipelines', 'tasks', 'activity', 'webhooks', 'api-keys', 'api-docs', 'users', 'settings'].map(view => `
                 <button onclick="switchView('${view}')" class="sidebar-item w-full text-right px-4 py-3 rounded-lg ${currentView === view ? 'active' : ''}">
                   ${view === 'dashboard' ? '📊 לוח בקרה' :
                     view === 'customers' ? '👥 לקוחות' :
@@ -211,6 +211,7 @@
                     view === 'activity' ? '📝 פעילות' :
                     view === 'webhooks' ? '🔗 Webhooks' :
                     view === 'api-keys' ? '🔑 API Keys' :
+                    view === 'api-docs' ? '📚 תיעוד API ל-n8n' :
                     view === 'users' ? '👤 עובדים' :
                     '⚙️ הגדרות'}
                 </button>
@@ -577,12 +578,16 @@
 
         content.innerHTML = `
           <div class="mb-6">
-            <form id="taskForm" class="bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-4 gap-2">
+            <form id="taskForm" class="bg-white p-6 rounded-xl shadow grid grid-cols-1 md:grid-cols-5 gap-2">
               <input type="text" id="taskTitle" placeholder="כותרת משימה" required class="px-4 py-2 border border-gray-300 rounded-lg">
               <select id="taskPriority" class="px-4 py-2 border border-gray-300 rounded-lg">
                 <option value="low">👇 נמוכה</option>
                 <option value="medium" selected>➡️ בינונית</option>
                 <option value="high">👆 גבוהה</option>
+              </select>
+              <select id="taskAssignee" class="px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="">👤 לא משויך</option>
+                ${employees.map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
               </select>
               <input type="date" id="taskDue" class="px-4 py-2 border border-gray-300 rounded-lg">
               <button type="submit" class="text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ הוסף משימה</button>
@@ -624,6 +629,13 @@
                       <p class="text-xs text-gray-600 mt-1">${priorityLabel[t.priority] || t.priority}</p>
                       ${t.due_date ? `<p class="text-xs text-gray-500 mt-1">יעד: ${t.due_date}</p>` : ''}
                       ${t.completed_at ? `<p class="text-xs text-gray-500 mt-1">הושלם: ${new Date(t.completed_at).toLocaleDateString('he-IL')}</p>` : ''}
+                      <div class="mt-2" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
+                        <label class="text-xs text-gray-500">👤</label>
+                        <select onchange="reassignTask('${t.id}', this.value)" draggable="false" class="text-xs border border-gray-300 rounded px-1 py-0.5">
+                          <option value="">לא משויך</option>
+                          ${employees.map(u => `<option value="${u.id}" ${t.assigned_to === u.id ? 'selected' : ''}>${u.name}</option>`).join('')}
+                        </select>
+                      </div>
                       <div class="flex gap-2 mt-2 flex-wrap">
                         ${t.status === 'open' ? `<button onclick="updateTaskStatus('${t.id}', 'in_progress')" class="text-xs text-blue-600 hover:text-blue-800">→ בהביצוע</button>` : ''}
                         ${t.status === 'in_progress' ? `<button onclick="updateTaskStatus('${t.id}', 'completed')" class="text-xs text-green-600 hover:text-green-800">✓ הושלם</button>` : ''}
@@ -646,6 +658,7 @@
                 title: document.getElementById('taskTitle').value,
                 priority: document.getElementById('taskPriority').value,
                 due_date: document.getElementById('taskDue').value,
+                assigned_to: document.getElementById('taskAssignee').value || null,
                 status: 'open'
               })
             });
@@ -756,10 +769,10 @@
           ${lastCreatedApiKey ? `
             <div class="mb-6 bg-green-50 border-2 border-green-300 rounded-xl p-6">
               <div class="flex justify-between items-start mb-2">
-                <h3 class="font-bold text-green-800">✓ המפתח "${lastCreatedApiKey.name}" נוצר בהצלחה</h3>
+                <h3 class="font-bold text-green-800">🔑 המפתח "${lastCreatedApiKey.name}"</h3>
                 <button onclick="dismissApiKeyBanner()" class="text-gray-500 hover:text-gray-700">✕</button>
               </div>
-              <p class="text-xs text-gray-600 mb-2">זו הפעם היחידה שבה המפתח המלא יוצג. העתק ושמור אותו במקום בטוח.</p>
+              <p class="text-xs text-gray-600 mb-2">ניתן גם לחזור ולהציג את המפתח בכל רגע דרך הכפתור "👁️ הצג" ליד השורה שלו בטבלה.</p>
               <div class="flex gap-2 items-center">
                 <code class="flex-1 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm font-mono break-all">${lastCreatedApiKey.key}</code>
                 <button onclick="copyApiKey('${lastCreatedApiKey.key}')" class="bg-green-600 text-white font-bold px-4 py-2 rounded-lg text-sm hover:bg-green-700 whitespace-nowrap">📋 העתק</button>
@@ -783,7 +796,8 @@
                     <td class="px-6 py-4 font-medium">${k.name}</td>
                     <td class="px-6 py-4 text-sm font-mono">${k.key_preview}</td>
                     <td class="px-6 py-4 text-sm">${new Date(k.created_at).toLocaleDateString('he-IL')}</td>
-                    <td class="px-6 py-4 text-sm">
+                    <td class="px-6 py-4 text-sm space-x-3 space-x-reverse">
+                      <button onclick="revealApiKey('${k.id}')" class="text-blue-600 hover:text-blue-800">👁️ הצג</button>
                       <button onclick="revokeApiKey('${k.id}')" class="text-red-600 hover:text-red-800">בטל</button>
                     </td>
                   </tr>
@@ -817,6 +831,134 @@
             alert('❌ ' + error.message);
           }
         });
+
+      } else if (currentView === 'api-docs') {
+        document.getElementById('pageTitle').textContent = '📚 תיעוד API ל-n8n';
+
+        const activeKeyNames = apiKeys.map(k => k.name).join(', ') || null;
+
+        const endpointRows = [
+          { m: 'POST', p: '/customers', perm: 'customers.create', desc: 'יצירת ליד/לקוח חדש', body: '{"first_name":"...", "last_name":"...", "email":"...", "phone":"...", "company":"...", "pipeline_id":"...", "stage_id":"..."}' },
+          { m: 'GET', p: '/customers', perm: 'customers.view', desc: 'רשימת כל הלקוחות של העסק', body: null },
+          { m: 'GET', p: '/customers/:id', perm: 'customers.view', desc: 'שליפת לקוח בודד', body: null },
+          { m: 'PATCH', p: '/customers/:id', perm: 'customers.edit', desc: 'עדכון לקוח / העברת שלב ב-pipeline', body: '{"stage_id":"...", "phone":"...", "company":"..."}' },
+          { m: 'GET', p: '/pipelines', perm: 'pipelines.view', desc: 'רשימת ה-pipelines של העסק', body: null },
+          { m: 'GET', p: '/tasks', perm: 'tasks.view', desc: 'רשימת כל המשימות של העסק', body: null },
+          { m: 'POST', p: '/tasks', perm: 'tasks.create', desc: 'יצירת משימה, כולל שיוך לעובד ספציפי', body: '{"title":"...", "description":"...", "customer_id":"...", "priority":"low|medium|high", "due_date":"YYYY-MM-DD", "assigned_to":"USER_ID"}' },
+          { m: 'PATCH', p: '/tasks/:id', perm: 'tasks.edit', desc: 'עדכון משימה - סטטוס, שיוך מחדש (assigned_to) וכו׳', body: '{"status":"open|in_progress|completed|cancelled", "assigned_to":"USER_ID"}' },
+          { m: 'GET', p: '/notes/customer/:customerId', perm: 'notes.view', desc: 'הערות עבור לקוח מסוים', body: null },
+          { m: 'POST', p: '/notes', perm: 'notes.create', desc: 'הוספת הערה ללקוח', body: '{"customer_id":"...", "content":"..."}' }
+        ];
+
+        content.innerHTML = `
+          <div class="max-w-4xl space-y-6">
+
+            <div class="bg-white rounded-xl shadow p-6">
+              <h3 class="text-lg font-bold mb-2" style="color: var(--secondary);">🔌 חיבור מ-n8n אל ה-CRM</h3>
+              <p class="text-sm text-gray-700 mb-3">כל הקריאות מבוצעות מול כתובת הבסיס הבאה, עם כותרת אימות <code class="bg-gray-100 px-1 rounded">x-api-key</code> (במקום Bearer token, שמיועד רק להתחברות משתמשים דרך המסך):</p>
+              <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">Base URL: ${API_URL}
+Header:   x-api-key: YOUR_API_KEY</pre>
+              <p class="text-xs text-gray-600 mt-3">
+                ${activeKeyNames
+                  ? `יש לך כרגע מפתחות פעילים בשם: <b>${activeKeyNames}</b>.`
+                  : 'עדיין אין לך API Key פעיל.'}
+                עברו לעמוד <button onclick="switchView('api-keys')" class="text-blue-600 underline">🔑 API Keys</button> כדי ליצור מפתח חדש, או ללחוץ "👁️ הצג" ליד מפתח קיים כדי לקבל שוב את הערך המלא שלו בכל רגע.
+              </p>
+            </div>
+
+            <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200">
+              <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">⚙️ הגדרת HTTP Request node ב-n8n</h3>
+              <ol class="space-y-2 text-sm text-gray-700 list-decimal pr-5">
+                <li>הוסיפו node מסוג <b>HTTP Request</b>.</li>
+                <li>Method: לפי הפעולה בטבלה למטה (GET / POST / PATCH).</li>
+                <li>URL: <code class="bg-white px-1 rounded" dir="ltr">${API_URL}/&lt;endpoint&gt;</code></li>
+                <li>Authentication → <b>Generic Credential Type</b> → <b>Header Auth</b>, עם Name = <code class="bg-white px-1 rounded" dir="ltr">x-api-key</code> ו-Value = המפתח שלכם.</li>
+                <li>Body Content Type: <b>JSON</b>, לפי השדות בטבלה.</li>
+              </ol>
+            </div>
+
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+              <div class="p-4 border-b">
+                <h3 class="text-lg font-bold" style="color: var(--secondary);">📋 Endpoints זמינים דרך API Key</h3>
+                <p class="text-xs text-gray-500 mt-1">כל הבקשות מסוננות אוטומטית לעסק שאליו שייך המפתח - אי אפשר לגעת בנתונים של עסק אחר.</p>
+              </div>
+              <table class="w-full text-sm">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="px-4 py-3 text-right font-bold">Method</th>
+                    <th class="px-4 py-3 text-right font-bold">Path</th>
+                    <th class="px-4 py-3 text-right font-bold">תיאור</th>
+                    <th class="px-4 py-3 text-right font-bold">Body לדוגמה</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${endpointRows.map(r => `
+                    <tr class="border-b align-top hover:bg-gray-50">
+                      <td class="px-4 py-3 font-mono font-bold ${r.m === 'GET' ? 'text-blue-600' : r.m === 'POST' ? 'text-green-600' : 'text-orange-600'}">${r.m}</td>
+                      <td class="px-4 py-3 font-mono text-xs" dir="ltr">${r.p}</td>
+                      <td class="px-4 py-3">${r.desc}</td>
+                      <td class="px-4 py-3">${r.body ? `<code class="text-xs bg-gray-100 px-1 rounded break-all" dir="ltr">${r.body}</code>` : '<span class="text-gray-400 text-xs">—</span>'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            ${employees.length > 0 ? `
+              <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="text-lg font-bold mb-2" style="color: var(--secondary);">👤 מזהי עובדים לשיוך משימות (assigned_to)</h3>
+                <p class="text-sm text-gray-700 mb-3">כדי לשייך משימה שנוצרת מ-n8n לעובד ספציפי, שימו את ה-ID שלו בשדה <code class="bg-gray-100 px-1 rounded">assigned_to</code> בבקשת ה-POST/PATCH ל-<code class="bg-gray-100 px-1 rounded">/tasks</code>:</p>
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-100">
+                    <tr><th class="px-4 py-2 text-right font-bold">שם</th><th class="px-4 py-2 text-right font-bold">User ID</th></tr>
+                  </thead>
+                  <tbody>
+                    ${employees.map(u => `
+                      <tr class="border-b">
+                        <td class="px-4 py-2">${u.name}</td>
+                        <td class="px-4 py-2 font-mono text-xs" dir="ltr">${u.id}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+
+            <div class="bg-white rounded-xl shadow p-6">
+              <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">💻 דוגמאות curl</h3>
+              <p class="text-xs text-gray-500 mb-2">יצירת ליד חדש:</p>
+              <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto mb-4" dir="ltr">curl -X POST ${API_URL}/customers \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"first_name":"Lead","last_name":"Name","email":"lead@example.com"}'</pre>
+              <p class="text-xs text-gray-500 mb-2">יצירת משימה משויכת לעובד:</p>
+              <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto mb-4" dir="ltr">curl -X POST ${API_URL}/tasks \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"title":"התקשר ללקוח","priority":"high","assigned_to":"USER_ID"}'</pre>
+              <p class="text-xs text-gray-500 mb-2">שינוי סטטוס משימה:</p>
+              <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">curl -X PATCH ${API_URL}/tasks/TASK_ID \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"status":"completed"}'</pre>
+            </div>
+
+            <div class="bg-purple-50 rounded-xl shadow p-6 border border-purple-200">
+              <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">📤 כיוון הפוך: CRM שולח אירועים ל-n8n (Webhooks)</h3>
+              <p class="text-sm text-gray-700 mb-3">כדי שה-CRM יפעיל workflow ב-n8n אוטומטית (למשל בכל פעם שנוצר ליד), הקימו ב-n8n node מסוג <b>Webhook</b> (Trigger), העתיקו את ה-Production URL שלו, ורשמו אותו בעמוד <button onclick="switchView('webhooks')" class="text-blue-600 underline">🔗 Webhooks</button> של ה-CRM.</p>
+              <p class="text-xs text-gray-600 mb-2">אירועים זמינים: <code class="bg-white px-1 rounded">customer.created</code>, <code class="bg-white px-1 rounded">customer.updated</code>, <code class="bg-white px-1 rounded">customer.stage_changed</code>, <code class="bg-white px-1 rounded">customer.deleted</code>, <code class="bg-white px-1 rounded">task.created</code>, <code class="bg-white px-1 rounded">task.completed</code>.</p>
+              <p class="text-xs text-gray-600 mb-2">גוף הבקשה שיישלח ל-n8n (POST, JSON):</p>
+              <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">{
+  "event_id": "...",
+  "event": "task.created",
+  "tenant_id": "...",
+  "task": { ... },
+  "timestamp": "2026-08-17T12:00:00.000Z"
+}</pre>
+            </div>
+
+          </div>
+        `;
 
       } else if (currentView === 'users') {
         document.getElementById('pageTitle').textContent = '👤 עובדים';
@@ -1043,6 +1185,16 @@
       }
     };
 
+    window.revealApiKey = async function(id) {
+      try {
+        const result = await apiCall(`/api-keys/${id}/reveal`);
+        lastCreatedApiKey = result;
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
     window.dismissApiKeyBanner = function() {
       lastCreatedApiKey = null;
       renderContent();
@@ -1169,6 +1321,19 @@
         await apiCall(`/tasks/${id}`, {
           method: 'PATCH',
           body: JSON.stringify({ status })
+        });
+        await loadData();
+        renderContent();
+      } catch (error) {
+        alert('❌ ' + error.message);
+      }
+    };
+
+    window.reassignTask = async function(id, userId) {
+      try {
+        await apiCall(`/tasks/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ assigned_to: userId || null })
         });
         await loadData();
         renderContent();

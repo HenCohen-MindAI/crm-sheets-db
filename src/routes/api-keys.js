@@ -55,6 +55,25 @@ router.post('/', requirePermission('api.manage'), (req, res) => {
   });
 });
 
+// Reveal the full key again (it's kept in plaintext server-side, so unlike
+// a password there is no reason to force revoke+recreate just to see it).
+// Gated behind api.manage (not api.view) since it's more sensitive than the
+// masked list.
+router.get('/:id/reveal', requirePermission('api.manage'), (req, res) => {
+  const apiKey = apiKeys.get(req.params.id);
+
+  if (!apiKey || apiKey.tenant_id !== req.tenant.id || apiKey.revoked_at) {
+    return res.status(404).json({ error: 'API key לא נמצא' });
+  }
+
+  res.json({
+    id: apiKey.id,
+    name: apiKey.name,
+    key: apiKey.key,
+    created_at: apiKey.created_at
+  });
+});
+
 // Revoke API key
 router.delete('/:id', requirePermission('api.manage'), (req, res) => {
   const apiKey = apiKeys.get(req.params.id);
