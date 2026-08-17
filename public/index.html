@@ -7,39 +7,55 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
-      --primary: #5B9FFF;
-      --secondary: #001F5C;
-      --accent: #4A8FFF;
-      --light: #F0F6FF;
+      --bg: #F4F4F5;
+      --ink: #18181B;
+      --muted: #71717A;
+      --primary: #18181B;
+      --secondary: #18181B;
+      --accent: #3F3F46;
+      --brand: #4F46E5;
+      --light: #EEEEF1;
+      --mint: #10B981;
+      --mint-soft: #D1FAE5;
+      --rose: #E11D48;
+      --rose-soft: #FFE4E6;
     }
 
     * { direction: rtl; text-align: right; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: var(--bg); }
     input, textarea, select { direction: ltr; text-align: left; }
 
     .logo-svg { width: 40px; height: 40px; }
-    .sidebar-header { background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%); }
+    .sidebar-header { border-bottom: 1px solid #E4E4E7; }
     .sidebar-item.active {
-      background-color: var(--light);
-      border-right: 4px solid var(--primary);
-      color: var(--secondary);
-      font-weight: bold;
+      background-color: #fff;
+      color: var(--ink);
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     .sidebar-item {
-      transition: all 0.2s ease;
-      color: white;
-      margin: 4px 0;
+      transition: all 0.15s ease;
+      color: var(--muted);
     }
-    .sidebar-item:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      padding-right: 8px;
+    .sidebar-item:hover:not(.active) {
+      background-color: rgba(0, 0, 0, 0.04);
+      color: var(--ink);
+    }
+    .sidebar-group-label {
+      color: var(--muted);
+      transition: color 0.15s ease;
+    }
+    .sidebar-group-label:hover { color: var(--ink); }
+    .sidebar-group-label.has-active { color: var(--ink); font-weight: 700; }
+    .sidebar-thread {
+      border-right: 1px solid #E4E4E7;
     }
     .btn-primary { background-color: var(--primary); }
     .btn-primary:hover { background-color: var(--accent); }
     .header-gradient { background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%); }
   </style>
 </head>
-<body class="bg-gray-50">
+<body style="background: var(--bg);">
   <div id="app"></div>
 
   <script type="module">
@@ -47,6 +63,32 @@
     const ROLE_LABELS = { admin: 'מנהל מערכת', manager: 'מנהל צוות', sales_rep: 'איש מכירות', viewer: 'צפייה בלבד' };
     let token = localStorage.getItem('token');
     let currentView = token ? 'dashboard' : 'login';
+
+    // Sidebar nav: flat items alongside collapsible groups, mirroring the
+    // tree-style grouped nav (parent + indented children with a connector
+    // line) from the reference design.
+    const NAV_CONFIG = [
+      { view: 'dashboard', icon: '📊', label: 'לוח בקרה' },
+      { group: 'customers', icon: '👥', label: 'לקוחות', children: [
+        { view: 'customers', label: 'רשימת לקוחות' },
+        { view: 'pipelines', label: 'Pipelines' }
+      ] },
+      { view: 'tasks', icon: '✓', label: 'משימות' },
+      { view: 'activity', icon: '📝', label: 'פעילות' },
+      { group: 'integrations', icon: '🔗', label: 'אינטגרציות', children: [
+        { view: 'webhooks', label: 'Webhooks' },
+        { view: 'api-keys', label: 'API Keys' },
+        { view: 'api-docs', label: 'תיעוד API ל-n8n' }
+      ] },
+      { view: 'users', icon: '👤', label: 'עובדים' },
+      { view: 'settings', icon: '⚙️', label: 'הגדרות' }
+    ];
+
+    function groupContaining(view) {
+      return NAV_CONFIG.find(item => item.children?.some(c => c.view === view))?.group || null;
+    }
+
+    let expandedGroup = groupContaining(currentView);
 
     let customers = [];
     let pipelines = [];
@@ -188,37 +230,56 @@
       await loadData();
 
       return `
-        <div class="flex h-screen bg-gray-50">
-          <div class="w-64 text-white shadow-lg flex flex-col h-screen" style="background: linear-gradient(180deg, var(--secondary) 0%, var(--accent) 100%);">
-            <div class="p-6 border-b border-blue-300 sidebar-header">
-              <div class="flex items-center gap-2 justify-end mb-2">
-                <h1 class="text-xl font-bold">MIND AI CRM</h1>
-                <svg viewBox="0 0 40 40" class="logo-svg" style="width: 30px; height: 30px;">
-                  <path d="M12,18 Q10,12 8,12 Q4,12 4,18 Q4,22 8,24 L12,24 Z" fill="var(--light)" stroke="white" stroke-width="0.5"/>
-                  <circle cx="6" cy="16" r="1" fill="white"/>
-                  <circle cx="7" cy="20" r="1" fill="white"/>
-                </svg>
+        <div class="flex h-screen" style="background: var(--bg);">
+          <div class="w-64 flex flex-col h-screen border-l" style="background: #FAFAFA; border-color: #E4E4E7;">
+            <div class="p-6 sidebar-header">
+              <div class="flex items-center gap-3 justify-end">
+                <h1 class="text-base font-bold" style="color: var(--ink);">MIND AI CRM</h1>
+                <div class="rounded-full flex items-center justify-center flex-shrink-0" style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--ink) 0%, var(--accent) 100%);">
+                  <svg viewBox="0 0 40 40" class="logo-svg" style="width: 20px; height: 20px;">
+                    <path d="M12,18 Q10,12 8,12 Q4,12 4,18 Q4,22 8,24 L12,24 Z" fill="#fff" stroke="white" stroke-width="0.5"/>
+                    <circle cx="6" cy="16" r="1" fill="var(--ink)"/>
+                    <circle cx="7" cy="20" r="1" fill="var(--ink)"/>
+                  </svg>
+                </div>
               </div>
-              <p class="text-xs text-gray-200">ניהול לקוחות ועסקים</p>
             </div>
-            <nav class="p-4 space-y-2 flex-1 overflow-y-auto">
-              ${['dashboard', 'customers', 'pipelines', 'tasks', 'activity', 'webhooks', 'api-keys', 'api-docs', 'users', 'settings'].map(view => `
-                <button onclick="switchView('${view}')" class="sidebar-item w-full text-right px-4 py-3 rounded-lg ${currentView === view ? 'active' : ''}">
-                  ${view === 'dashboard' ? '📊 לוח בקרה' :
-                    view === 'customers' ? '👥 לקוחות' :
-                    view === 'pipelines' ? '🎯 Pipelines' :
-                    view === 'tasks' ? '✓ משימות' :
-                    view === 'activity' ? '📝 פעילות' :
-                    view === 'webhooks' ? '🔗 Webhooks' :
-                    view === 'api-keys' ? '🔑 API Keys' :
-                    view === 'api-docs' ? '📚 תיעוד API ל-n8n' :
-                    view === 'users' ? '👤 עובדים' :
-                    '⚙️ הגדרות'}
-                </button>
-              `).join('')}
+            <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
+              ${NAV_CONFIG.map(item => {
+                if (!item.group) {
+                  return `
+                    <button onclick="switchView('${item.view}')" class="sidebar-item w-full flex items-center justify-start gap-3 text-right px-4 py-2.5 rounded-xl text-sm ${currentView === item.view ? 'active' : ''}">
+                      <span>${item.label}</span>
+                      <span class="text-base">${item.icon}</span>
+                    </button>
+                  `;
+                }
+                const isExpanded = expandedGroup === item.group;
+                const hasActiveChild = item.children.some(c => c.view === currentView);
+                return `
+                  <div>
+                    <button onclick="toggleNavGroup('${item.group}')" class="sidebar-group-label w-full flex items-center justify-start gap-3 text-right px-4 py-2.5 rounded-xl text-sm ${hasActiveChild ? 'has-active' : ''}">
+                      <span>${item.label}</span>
+                      <span class="text-base">${item.icon}</span>
+                      <svg class="transition-transform" style="width:12px; height:12px; transform: rotate(${isExpanded ? '0' : '180'}deg)" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                    ${isExpanded ? `
+                      <div class="sidebar-thread mr-6 pr-3 mt-1 space-y-1">
+                        ${item.children.map(c => `
+                          <button onclick="switchView('${c.view}')" class="sidebar-item w-full text-right px-4 py-2 rounded-xl text-sm ${currentView === c.view ? 'active' : ''}">
+                            ${c.label}
+                          </button>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
             </nav>
-            <div class="p-4 border-t border-blue-500 flex-shrink-0">
-              <button onclick="logout()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg">התנתקות</button>
+            <div class="p-4 flex-shrink-0" style="border-top: 1px solid #E4E4E7;">
+              <button onclick="logout()" class="w-full text-sm font-medium py-2.5 rounded-xl transition" style="background: var(--rose-soft); color: var(--rose);" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">התנתקות</button>
             </div>
           </div>
 
@@ -229,12 +290,10 @@
                 <button onclick="returnToOwnerAccount()" class="underline font-bold whitespace-nowrap">↩ חזרה לחשבון שלי</button>
               </div>
             ` : ''}
-            <div class="bg-white shadow border-b border-gray-200">
-              <div class="max-w-7xl mx-auto px-6 py-4">
-                <h2 class="text-2xl font-bold text-gray-800" id="pageTitle">לוח בקרה</h2>
-              </div>
+            <div class="px-6 pt-8 pb-2 max-w-7xl mx-auto w-full">
+              <h2 class="text-3xl font-extrabold tracking-tight" style="color: var(--ink);" id="pageTitle">לוח בקרה</h2>
             </div>
-            <div id="content" class="max-w-7xl mx-auto px-6 py-8"></div>
+            <div id="content" class="max-w-7xl mx-auto px-6 py-6"></div>
           </div>
         </div>
       `;
@@ -251,48 +310,33 @@
         const taskCount = tasks.length;
         const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
+        const completionPct = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : null;
+
+        const statCard = ({ label, value, icon, pill }) => `
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex items-center justify-between mb-5">
+              <p class="text-sm" style="color: var(--muted);">${label}</p>
+              <div class="rounded-full flex items-center justify-center flex-shrink-0" style="width: 40px; height: 40px; background: var(--light);">
+                <span class="text-lg">${icon}</span>
+              </div>
+            </div>
+            <div class="flex items-end gap-3 flex-wrap">
+              <p class="text-4xl font-extrabold" style="color: var(--ink);">${value}</p>
+              ${pill ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background: var(--mint-soft); color: var(--mint);">${pill}</span>` : ''}
+            </div>
+          </div>
+        `;
+
         content.innerHTML = `
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--primary);">
-              <div class="flex justify-between items-start">
-                <div>
-                  <p class="text-gray-600 text-sm">לקוחות פעילים</p>
-                  <p class="text-4xl font-bold" style="color: var(--secondary);">${activeCustomers}</p>
-                </div>
-                <span class="text-3xl">👥</span>
-              </div>
-            </div>
-            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--accent);">
-              <div class="flex justify-between items-start">
-                <div>
-                  <p class="text-gray-600 text-sm">לקוחות חדשים החודש</p>
-                  <p class="text-4xl font-bold" style="color: var(--secondary);">${monthCustomers}</p>
-                </div>
-                <span class="text-3xl">📈</span>
-              </div>
-            </div>
-            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--primary);">
-              <div class="flex justify-between items-start">
-                <div>
-                  <p class="text-gray-600 text-sm">משימות כללי</p>
-                  <p class="text-4xl font-bold" style="color: var(--secondary);">${taskCount}</p>
-                </div>
-                <span class="text-3xl">✓</span>
-              </div>
-            </div>
-            <div class="bg-white rounded-xl shadow p-6 border-r-4" style="border-color: var(--accent);">
-              <div class="flex justify-between items-start">
-                <div>
-                  <p class="text-gray-600 text-sm">משימות שהושלמו</p>
-                  <p class="text-4xl font-bold" style="color: var(--secondary);">${completedTasks}/${taskCount}</p>
-                </div>
-                <span class="text-3xl">✅</span>
-              </div>
-            </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+            ${statCard({ label: 'לקוחות פעילים', value: activeCustomers, icon: '👥' })}
+            ${statCard({ label: 'לקוחות חדשים החודש', value: monthCustomers, icon: '📈' })}
+            ${statCard({ label: 'משימות כללי', value: taskCount, icon: '✓' })}
+            ${statCard({ label: 'משימות שהושלמו', value: `${completedTasks}/${taskCount}`, icon: '✅', pill: completionPct !== null ? `${completionPct}%` : null })}
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-xl shadow p-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🔥 לקוחות אחרונים</h3>
               <div class="space-y-3">
                 ${customers.slice(-5).reverse().map(c => `
@@ -307,7 +351,7 @@
               </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow p-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📋 פעילויות אחרונות</h3>
               <div class="space-y-3">
                 ${activities.slice(-5).reverse().map(a => `
@@ -348,7 +392,7 @@
             </form>
           </div>
 
-          <div class="bg-white rounded-xl shadow overflow-hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <table class="w-full">
               <thead class="bg-gray-100">
                 <tr>
@@ -603,13 +647,13 @@
               <label class="block text-xs font-medium text-gray-600 mb-1">עד תאריך</label>
               <input type="date" id="taskFilterTo" value="${taskFilterTo}" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
             </div>
-            <button onclick="applyTaskDateFilter()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm hover:bg-blue-700">🔍 סנן</button>
+            <button onclick="applyTaskDateFilter()" style="background: var(--primary);" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='var(--primary)'" class="text-white font-bold px-4 py-2 rounded-lg text-sm">🔍 סנן</button>
             ${(taskFilterFrom || taskFilterTo) ? `<button onclick="clearTaskDateFilter()" class="text-gray-600 hover:text-gray-800 text-sm">✕ נקה סינון</button>` : ''}
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             ${taskColumns.map(col => `
-              <div class="bg-white rounded-xl shadow overflow-hidden">
+              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="p-4 border-b ${col.border}">
                   <h3 class="text-sm font-bold" style="color: var(--secondary);">${col.label}</h3>
                   <p class="text-xs text-gray-500 mt-1">${tasksForColumn(col.status).length} משימות</p>
@@ -673,7 +717,7 @@
       } else if (currentView === 'activity') {
         document.getElementById('pageTitle').textContent = '📝 פעילות';
         content.innerHTML = `
-          <div class="bg-white rounded-xl shadow overflow-hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <table class="w-full">
               <thead class="bg-gray-100">
                 <tr>
@@ -715,13 +759,13 @@
                 <option value="task.completed">task.completed</option>
               </select>
               <input type="url" placeholder="URL" id="webhookUrl" required class="px-4 py-2 border border-gray-300 rounded-lg">
-              <button type="submit" class="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700">הוסף Webhook</button>
+              <button type="submit" style="background: var(--primary);" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='var(--primary)'" class="text-white font-bold px-6 py-2 rounded-lg">הוסף Webhook</button>
             </form>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             ${webhooks.map(w => `
-              <div class="bg-white rounded-xl shadow p-6">
+              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div class="flex justify-between items-start mb-4">
                   <div>
                     <h3 class="text-lg font-bold">${w.event}</h3>
@@ -762,7 +806,7 @@
           <div class="mb-6">
             <form id="apiKeyForm" class="flex gap-2 bg-white p-6 rounded-xl shadow">
               <input type="text" placeholder="שם API Key" id="keyName" required class="flex-1 px-4 py-2 border border-gray-300 rounded-lg">
-              <button type="submit" class="bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700">צור</button>
+              <button type="submit" style="background: var(--primary);" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='var(--primary)'" class="text-white font-bold px-6 py-2 rounded-lg">צור</button>
             </form>
           </div>
 
@@ -780,7 +824,7 @@
             </div>
           ` : ''}
 
-          <div class="bg-white rounded-xl shadow overflow-hidden mb-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
             <table class="w-full">
               <thead class="bg-gray-100">
                 <tr>
@@ -806,7 +850,7 @@
             </table>
           </div>
 
-          <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200">
+          <div class="bg-blue-50 rounded-2xl shadow-sm p-6 border border-blue-200">
             <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">📚 הכנסת מידע למערכת דרך API</h3>
             <p class="text-sm text-gray-700 mb-3">ניתן ליצור לקוחות/לידים או משימות ישירות מ-Activepieces או כל מערכת חיצונית, באמצעות ה-API Key בכותרת <code class="bg-white px-1 rounded">x-api-key</code>:</p>
             <pre class="bg-white border border-blue-200 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">curl -X POST ${API_URL}/customers \\
@@ -853,7 +897,7 @@
         content.innerHTML = `
           <div class="max-w-4xl space-y-6">
 
-            <div class="bg-white rounded-xl shadow p-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 class="text-lg font-bold mb-2" style="color: var(--secondary);">🔌 חיבור מ-n8n אל ה-CRM</h3>
               <p class="text-sm text-gray-700 mb-3">כל הקריאות מבוצעות מול כתובת הבסיס הבאה, עם כותרת אימות <code class="bg-gray-100 px-1 rounded">x-api-key</code> (במקום Bearer token, שמיועד רק להתחברות משתמשים דרך המסך):</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto" dir="ltr">Base URL: ${API_URL}
@@ -866,7 +910,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               </p>
             </div>
 
-            <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200">
+            <div class="bg-blue-50 rounded-2xl shadow-sm p-6 border border-blue-200">
               <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">⚙️ הגדרת HTTP Request node ב-n8n</h3>
               <ol class="space-y-2 text-sm text-gray-700 list-decimal pr-5">
                 <li>הוסיפו node מסוג <b>HTTP Request</b>.</li>
@@ -877,7 +921,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               </ol>
             </div>
 
-            <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div class="p-4 border-b">
                 <h3 class="text-lg font-bold" style="color: var(--secondary);">📋 Endpoints זמינים דרך API Key</h3>
                 <p class="text-xs text-gray-500 mt-1">כל הבקשות מסוננות אוטומטית לעסק שאליו שייך המפתח - אי אפשר לגעת בנתונים של עסק אחר.</p>
@@ -905,7 +949,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
             </div>
 
             ${employees.length > 0 ? `
-              <div class="bg-white rounded-xl shadow p-6">
+              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <h3 class="text-lg font-bold mb-2" style="color: var(--secondary);">👤 מזהי עובדים לשיוך משימות (assigned_to)</h3>
                 <p class="text-sm text-gray-700 mb-3">כדי לשייך משימה שנוצרת מ-n8n לעובד ספציפי, שימו את ה-ID שלו בשדה <code class="bg-gray-100 px-1 rounded">assigned_to</code> בבקשת ה-POST/PATCH ל-<code class="bg-gray-100 px-1 rounded">/tasks</code>:</p>
                 <table class="w-full text-sm">
@@ -924,7 +968,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               </div>
             ` : ''}
 
-            <div class="bg-white rounded-xl shadow p-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">💻 דוגמאות curl</h3>
               <p class="text-xs text-gray-500 mb-2">יצירת ליד חדש:</p>
               <pre class="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-x-auto mb-4" dir="ltr">curl -X POST ${API_URL}/customers \\
@@ -943,7 +987,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
   -d '{"status":"completed"}'</pre>
             </div>
 
-            <div class="bg-purple-50 rounded-xl shadow p-6 border border-purple-200">
+            <div class="bg-purple-50 rounded-2xl shadow-sm p-6 border border-purple-200">
               <h3 class="text-lg font-bold mb-3" style="color: var(--secondary);">📤 כיוון הפוך: CRM שולח אירועים ל-n8n (Webhooks)</h3>
               <p class="text-sm text-gray-700 mb-3">כדי שה-CRM יפעיל workflow ב-n8n אוטומטית (למשל בכל פעם שנוצר ליד), הקימו ב-n8n node מסוג <b>Webhook</b> (Trigger), העתיקו את ה-Production URL שלו, ורשמו אותו בעמוד <button onclick="switchView('webhooks')" class="text-blue-600 underline">🔗 Webhooks</button> של ה-CRM.</p>
               <p class="text-xs text-gray-600 mb-2">אירועים זמינים: <code class="bg-white px-1 rounded">customer.created</code>, <code class="bg-white px-1 rounded">customer.updated</code>, <code class="bg-white px-1 rounded">customer.stage_changed</code>, <code class="bg-white px-1 rounded">customer.deleted</code>, <code class="bg-white px-1 rounded">task.created</code>, <code class="bg-white px-1 rounded">task.completed</code>.</p>
@@ -975,7 +1019,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
             </form>
           </div>
 
-          <div class="bg-white rounded-xl shadow overflow-hidden">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <table class="w-full">
               <thead class="bg-gray-100">
                 <tr>
@@ -1031,7 +1075,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
         document.getElementById('pageTitle').textContent = '⚙️ הגדרות';
         content.innerHTML = `
           <div class="max-w-2xl">
-            <div class="bg-white rounded-xl shadow p-6 mb-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🔗 חיבור Google Sheets</h3>
               <form id="settingsForm" class="space-y-4">
                 <div>
@@ -1043,7 +1087,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
               </form>
             </div>
 
-            <div class="bg-blue-50 rounded-xl shadow p-6 border border-blue-200 mb-6">
+            <div class="bg-blue-50 rounded-2xl shadow-sm p-6 border border-blue-200 mb-6">
               <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">📚 כיצד להגדיר את Google Sheets?</h3>
               <ol class="space-y-3 text-sm text-gray-700">
                 <li><span class="font-bold">1.</span> צור קובץ Google Sheets ריק (אחד בלבד, לא צריך ליצור בו גיליונות)</li>
@@ -1054,7 +1098,7 @@ Header:   x-api-key: YOUR_API_KEY</pre>
             </div>
 
             ${currentUser?.isPlatformOwner ? `
-              <div class="bg-white rounded-xl shadow p-6 mb-6">
+              <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
                 <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🏢 ניהול עסקים</h3>
                 <p class="text-xs text-gray-600 mb-4">כל עסק מבודד לחלוטין - ללא שיתוף נתונים בין עסקים. יצירת עסק חדש יוצרת עבורו משתמש מנהל נפרד. "כניסה לצפייה" מאפשרת לך לראות ולנהל את הנתונים של עסק מסוים בלי לדעת את הסיסמה שלו.</p>
                 <form id="businessForm" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -1132,6 +1176,13 @@ Header:   x-api-key: YOUR_API_KEY</pre>
 
     window.switchView = async function(view) {
       currentView = view;
+      const g = groupContaining(view);
+      if (g) expandedGroup = g;
+      render();
+    };
+
+    window.toggleNavGroup = function(group) {
+      expandedGroup = expandedGroup === group ? null : group;
       render();
     };
 
