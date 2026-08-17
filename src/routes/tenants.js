@@ -1,9 +1,9 @@
 import express from 'express';
 import {
-  getTenant, updateTenantSpreadsheet, listTenants,
+  getTenant, updateTenantSpreadsheet, createTenant, listTenants,
   updateTenantStatus, deleteTenant
 } from '../services/tenant-service.js';
-import { findTenantAdmin, deleteTenantUsers } from '../services/user-service.js';
+import { createUser, toPublicUser, findTenantAdmin, deleteTenantUsers } from '../services/user-service.js';
 import { requirePlatformOwner } from '../middleware/tenant.js';
 import { generateToken } from '../middleware/auth.js';
 import { ensureSheetsStructure, LEADS_TASKS_SCHEMA } from '../services/google-sheets.js';
@@ -24,6 +24,38 @@ const router = express.Router();
 // List every business on the system
 router.get('/', requirePlatformOwner, (req, res) => {
   res.json({ data: listTenants() });
+});
+
+// Create a new business (tenant) with its own first admin user
+router.post('/', requirePlatformOwner, async (req, res) => {
+  const { business_name, admin_name, admin_email, admin_password } = req.body;
+
+  if (!business_name || !admin_name || !admin_email || !admin_password) {
+    return res.status(400).json({ error: 'שם עסק, שם מנהל, אימייל וסיסמה חובה' });
+  }
+  if (admin_password.length < 6) {
+    return res.status(400).json({ error: 'סיסמה חייבת להכיל לפחות 6 תווים' });
+  }
+
+  const tenant = createTenant(business_name);
+
+  let adminUser;
+  try {
+    adminUser = createUser(tenant.id, {
+      name: admin_name,
+      email: admin_email,
+      password: admin_password,
+      role: 'admin'
+    });
+  } catch (error) {
+    deleteTenant(tenant.id);
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.status(201).json({
+    tenant,
+    admin: toPublicUser(adminUser)
+  });
 });
 
 // Enable/disable a business - blocks every request from its own users

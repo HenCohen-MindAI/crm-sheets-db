@@ -1056,7 +1056,14 @@ Header:   x-api-key: YOUR_API_KEY</pre>
             ${currentUser?.isPlatformOwner ? `
               <div class="bg-white rounded-xl shadow p-6 mb-6">
                 <h3 class="text-lg font-bold mb-4" style="color: var(--secondary);">🏢 ניהול עסקים</h3>
-                <p class="text-xs text-gray-600 mb-4">כל עסק מבודד לחלוטין - ללא שיתוף נתונים בין עסקים. "כניסה לצפייה" מאפשרת לך לראות ולנהל את הנתונים של עסק מסוים בלי לדעת את הסיסמה שלו.</p>
+                <p class="text-xs text-gray-600 mb-4">כל עסק מבודד לחלוטין - ללא שיתוף נתונים בין עסקים. יצירת עסק חדש יוצרת עבורו משתמש מנהל נפרד. "כניסה לצפייה" מאפשרת לך לראות ולנהל את הנתונים של עסק מסוים בלי לדעת את הסיסמה שלו.</p>
+                <form id="businessForm" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  <input type="text" id="bizName" placeholder="שם העסק" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <input type="text" id="bizAdminName" placeholder="שם מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <input type="email" id="bizAdminEmail" placeholder="אימייל מנהל" required class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <input type="password" id="bizAdminPassword" placeholder="סיסמת מנהל (לפחות 6 תווים)" required minlength="6" class="px-4 py-2 border border-gray-300 rounded-lg">
+                  <button type="submit" class="md:col-span-2 text-white font-bold px-6 py-2 rounded-lg" style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);">➕ צור עסק חדש</button>
+                </form>
 
                 ${businesses.length > 0 ? `
                   <div class="border-t pt-4">
@@ -1101,6 +1108,25 @@ Header:   x-api-key: YOUR_API_KEY</pre>
           }
         });
 
+        document.getElementById('businessForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            const result = await apiCall('/tenants', {
+              method: 'POST',
+              body: JSON.stringify({
+                business_name: document.getElementById('bizName').value,
+                admin_name: document.getElementById('bizAdminName').value,
+                admin_email: document.getElementById('bizAdminEmail').value,
+                admin_password: document.getElementById('bizAdminPassword').value
+              })
+            });
+            alert(`✓ העסק "${result.tenant.name}" נוצר. התחבר עם ${result.admin.email} כדי לנהל אותו.`);
+            await loadData();
+            renderContent();
+          } catch (error) {
+            alert('❌ ' + error.message);
+          }
+        });
       }
     }
 
